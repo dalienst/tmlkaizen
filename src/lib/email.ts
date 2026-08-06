@@ -2,7 +2,7 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const FROM_ADDRESS = "Kaizen Tracker <noreply@kaizen.tamarind.co.ke>";
+const FROM_ADDRESS = "Kaizen Tracker <noreply@tamarind.co.ke>";
 
 // ─── Welcome email (new user with generated password) ────────────────────────
 

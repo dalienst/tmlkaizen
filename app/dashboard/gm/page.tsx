@@ -6,6 +6,7 @@ import { eq, desc, inArray } from "drizzle-orm";
 import { StatusBadge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
+import { formatDate } from "@/lib/constants";
 
 export const metadata = { title: "GM Dashboard | Kaizen Tracker" };
 
@@ -174,7 +175,7 @@ export default async function GMPage() {
                     </div>
                   </td>
                   <td className="text-sub" style={{ whiteSpace: "nowrap" }}>
-                    {new Date(p.createdAt).toLocaleDateString()}
+                    {formatDate(p.createdAt)}
                   </td>
                   <td><StatusBadge status={p.status} /></td>
                 </tr>

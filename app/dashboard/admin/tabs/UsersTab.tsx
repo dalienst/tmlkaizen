@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import type { User, Location, Department } from "@/db/schema";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { createUser, toggleUserActive } from "@/actions/admin-actions";
-import { ROLE_LABELS } from "@/lib/constants";
+import { createUser, toggleUserActive, resendCredentials } from "@/actions/admin-actions";
+import { ROLE_LABELS, formatDate } from "@/lib/constants";
 import type { UserRole } from "@/lib/constants";
 
 interface UsersTabProps {
@@ -19,6 +19,9 @@ export default function UsersTab({ users, locations, departments }: UsersTabProp
   const [selectedRole, setSelectedRole] = useState<string>("HR");
   const [selectedHRLocations, setSelectedHRLocations] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [tabError, setTabError] = useState<string | null>(null);
+  const [tabSuccess, setTabSuccess] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function toggleHRLocation(id: number) {
@@ -39,12 +42,30 @@ export default function UsersTab({ users, locations, departments }: UsersTabProp
       setCreateOpen(false);
       setSelectedRole("HR");
       setSelectedHRLocations([]);
+      setTabSuccess("User created and credentials emailed successfully.");
     }
   }
 
   function handleToggle(user: User) {
+    setTabError(null);
+    setTabSuccess(null);
     startTransition(async () => {
       await toggleUserActive(user.id, !user.isActive);
+    });
+  }
+
+  function handleResend(userId: number) {
+    setTabError(null);
+    setTabSuccess(null);
+    setResendingId(userId);
+    startTransition(async () => {
+      const res = await resendCredentials(userId);
+      setResendingId(null);
+      if (res?.error) {
+        setTabError(res.error);
+      } else {
+        setTabSuccess("New credentials generated and emailed successfully.");
+      }
     });
   }
 
@@ -62,6 +83,9 @@ export default function UsersTab({ users, locations, departments }: UsersTabProp
         </Button>
       </div>
 
+      {tabError && <div className="alert alert-error mb-4">{tabError}</div>}
+      {tabSuccess && <div className="alert alert-success mb-4">{tabSuccess}</div>}
+
       <div className="card overflow-hidden">
         <table>
           <thead>
@@ -71,7 +95,7 @@ export default function UsersTab({ users, locations, departments }: UsersTabProp
               <th>Role</th>
               <th>Status</th>
               <th>Joined</th>
-              <th style={{ width: "7rem" }}>Actions</th>
+              <th style={{ width: "14rem" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -96,16 +120,27 @@ export default function UsersTab({ users, locations, departments }: UsersTabProp
                     {u.isActive ? "Active" : "Inactive"}
                   </span>
                 </td>
-                <td className="text-sub">{new Date(u.createdAt).toLocaleDateString()}</td>
+                <td className="text-sub">{formatDate(u.createdAt)}</td>
                 <td>
-                  <Button
-                    size="sm"
-                    variant={u.isActive ? "danger" : "secondary"}
-                    isLoading={isPending}
-                    onClick={() => handleToggle(u)}
-                  >
-                    {u.isActive ? "Deactivate" : "Activate"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      isLoading={resendingId === u.id}
+                      disabled={isPending}
+                      onClick={() => handleResend(u.id)}
+                    >
+                      Resend Password
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={u.isActive ? "danger" : "secondary"}
+                      isLoading={isPending && resendingId !== u.id}
+                      onClick={() => handleToggle(u)}
+                    >
+                      {u.isActive ? "Deactivate" : "Activate"}
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

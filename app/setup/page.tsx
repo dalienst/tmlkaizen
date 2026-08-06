@@ -21,7 +21,7 @@ export default async function SetupPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-card" style={{ maxWidth: "26rem" }}>
+      <div className="auth-card">
         <div className="auth-card__logo">Kaizen Tracker</div>
         <div
           className="auth-card__title"

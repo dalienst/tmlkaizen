@@ -8,7 +8,7 @@ import { Badge, StatusBadge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { updateProjectStatus } from "@/actions/manager-actions";
 import type { ProjectStatus } from "@/lib/constants";
-import { PROJECT_STATUS_LABELS } from "@/lib/constants";
+import { PROJECT_STATUS_LABELS, formatDate } from "@/lib/constants";
 import Image from "next/image";
 
 type ProjectRow = Omit<KaizenProject, "staffId"> & { staffName: string; staffId: string };
@@ -160,7 +160,7 @@ export default function ManagerDashboardClient({
                   </div>
                 </td>
                 <td className="text-sub" style={{ whiteSpace: "nowrap" }}>
-                  {new Date(p.createdAt).toLocaleDateString()}
+                  {formatDate(p.createdAt)}
                 </td>
                 <td><StatusBadge status={p.status} /></td>
               </tr>
@@ -195,7 +195,7 @@ export default function ManagerDashboardClient({
             <div className="flex items-center gap-2">
               <StatusBadge status={selected.status} />
               <span className="text-sub" style={{ fontSize: "0.8125rem" }}>
-                Submitted {new Date(selected.createdAt).toLocaleDateString()}
+                Submitted {formatDate(selected.createdAt)}
               </span>
             </div>
 

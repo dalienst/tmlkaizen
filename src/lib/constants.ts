@@ -42,3 +42,12 @@ export const ROLE_DASHBOARD: Record<UserRole, string> = {
 /** Max images per kaizen submission */
 export const MAX_UPLOAD_FILES = 3;
 export const MAX_FILE_SIZE_MB = 5;
+
+/** Formats dates consistently as DD/MM/YYYY to prevent SSR hydration mismatches */
+export function formatDate(date: Date | string | number) {
+  const d = new Date(date);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+}

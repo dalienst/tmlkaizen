@@ -9,6 +9,7 @@ import {
   updateLocation,
   toggleLocationActive,
 } from "@/actions/admin-actions";
+import { formatDate } from "@/lib/constants";
 
 interface LocationsTabProps {
   locations: Location[];
@@ -68,7 +69,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
                   </span>
                 </td>
                 <td className="text-sub">
-                  {new Date(loc.createdAt).toLocaleDateString()}
+                  {formatDate(loc.createdAt)}
                 </td>
                 <td onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-2">

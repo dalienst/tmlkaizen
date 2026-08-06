@@ -213,3 +213,38 @@ export async function updateUserRole(formData: FormData) {
     .where(eq(users.id, id));
   revalidatePath("/dashboard/admin");
 }
+
+export async function resendCredentials(userId: number) {
+  await assertAdmin();
+
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+
+  if (!user) {
+    return { error: "User not found." };
+  }
+
+  const temporaryPassword = generatePassword();
+  const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+
+  await db
+    .update(users)
+    .set({ passwordHash })
+    .where(eq(users.id, userId));
+
+  try {
+    await sendWelcomeEmail({
+      to: user.email,
+      name: user.name,
+      email: user.email,
+      temporaryPassword,
+    });
+  } catch (err) {
+    console.error("Failed to send welcome/reset credentials email:", err);
+    return { error: "Password was updated, but email delivery failed." };
+  }
+
+  revalidatePath("/dashboard/admin");
+  return { success: true };
+}
