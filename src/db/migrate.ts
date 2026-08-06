@@ -1,9 +1,10 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
-import { migrate } from "drizzle-orm/neon-http/migrator";
+import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import postgres from "postgres";
 import path from "path";
 import fs from "fs";
 
+// Fallback to load .env.local if DATABASE_URL is not in the environment
 if (!process.env.DATABASE_URL) {
   const envPath = path.join(process.cwd(), ".env.local");
   if (fs.existsSync(envPath)) {
@@ -25,8 +26,13 @@ if (!process.env.DATABASE_URL) {
 }
 
 async function runMigrations() {
-  const sql = neon(process.env.DATABASE_URL!);
-  const db = drizzle(sql);
+  if (!process.env.DATABASE_URL) {
+    throw new Error("DATABASE_URL is not set");
+  }
+
+  // max: 1 forces a single connection and allows the script to exit cleanly
+  const migrationClient = postgres(process.env.DATABASE_URL, { max: 1 });
+  const db = drizzle(migrationClient);
 
   console.log("⏳ Running database migrations...");
 
@@ -35,6 +41,9 @@ async function runMigrations() {
   });
 
   console.log("✅ Migrations complete.");
+  
+  // Explicitly close the connection so the build process doesn't hang
+  await migrationClient.end();
 }
 
 runMigrations().catch((err) => {
