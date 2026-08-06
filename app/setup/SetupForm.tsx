@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { registerFirstAdmin } from "./actions";
 
 const initialState = { error: "" };
@@ -10,6 +10,7 @@ export default function SetupForm() {
     registerFirstAdmin,
     initialState
   );
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
@@ -46,7 +47,7 @@ export default function SetupForm() {
         <input
           id="setup-password"
           name="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder="Min. 8 characters"
           required
           minLength={8}
@@ -59,12 +60,21 @@ export default function SetupForm() {
         <input
           id="setup-confirm"
           name="confirm"
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder="Repeat password"
           required
           minLength={8}
           autoComplete="new-password"
         />
+        <label style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem", marginTop: "0.375rem", color: "var(--color-text-sub)", cursor: "pointer", fontWeight: 400 }}>
+          <input
+            type="checkbox"
+            checked={showPassword}
+            onChange={() => setShowPassword(!showPassword)}
+            style={{ width: "auto", appearance: "auto" }}
+          />
+          Show password
+        </label>
       </div>
 
       <button

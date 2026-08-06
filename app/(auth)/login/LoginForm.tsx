@@ -14,6 +14,7 @@ export default function LoginForm() {
 
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -71,11 +72,20 @@ export default function LoginForm() {
         <input
           id="login-password"
           name="password"
-          type="password"
+          type={showPassword ? "text" : "password"}
           placeholder="Your password"
           required
           autoComplete="current-password"
         />
+        <label style={{ display: "flex", alignItems: "center", gap: "0.375rem", fontSize: "0.8125rem", marginTop: "0.375rem", color: "var(--color-text-sub)", cursor: "pointer", fontWeight: 400 }}>
+          <input
+            type="checkbox"
+            checked={showPassword}
+            onChange={() => setShowPassword(!showPassword)}
+            style={{ width: "auto", appearance: "auto" }}
+          />
+          Show password
+        </label>
       </div>
 
       <div style={{ textAlign: "right", marginTop: "-0.5rem" }}>

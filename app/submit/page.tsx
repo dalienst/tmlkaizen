@@ -20,7 +20,7 @@ export default async function SubmitPage() {
     <div className="submit-page">
       <header className="submit-header">
         <Image
-          src="/logo.jpg"
+          src="/logo.png"
           alt="Tamarind logo"
           width={32}
           height={32}

@@ -135,9 +135,9 @@ export default function UsersTab({ users, locations, departments }: UsersTabProp
         >
           {error && <div className="alert alert-error">{error}</div>}
 
-          <div className="alert alert-info" style={{ fontSize: "0.8125rem" }}>
+          <p className="text-sub" style={{ fontSize: "0.8125rem", marginBottom: "0.5rem" }}>
             A password will be auto-generated and emailed to the user. They can change it after signing in.
-          </div>
+          </p>
 
           <div className="field">
             <label htmlFor="user-name">Full name</label>

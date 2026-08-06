@@ -21,7 +21,7 @@ export default async function Home() {
       {/* Header */}
       <header className="submit-header">
         <Image
-          src="/logo.jpg"
+          src="/logo.png"
           alt="Tamarind logo"
           width={32}
           height={32}
@@ -75,7 +75,7 @@ export default async function Home() {
                 No core values defined yet. Administrator will set them up.
               </p>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-4">
                 {activeCoreValues.map((cv) => (
                   <div key={cv.id} className="card p-4 flex flex-col gap-1">
                     <div className="font-semibold text-base" style={{ color: "var(--color-brand)" }}>

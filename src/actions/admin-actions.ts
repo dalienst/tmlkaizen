@@ -121,20 +121,23 @@ const createUserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   role: z.enum(["HR", "GM", "DEPT_MANAGER"]),
-  locationId: z.coerce.number().nullable(),
-  departmentId: z.coerce.number().nullable(),
+  locationId: z.number().nullable(),
+  departmentId: z.number().nullable(),
   hrLocationIds: z.string().optional(), // JSON array of location IDs for HR
 });
 
 export async function createUser(formData: FormData) {
   await assertAdmin();
 
+  const locationIdVal = formData.get("locationId");
+  const departmentIdVal = formData.get("departmentId");
+
   const raw = {
     name: formData.get("name"),
     email: formData.get("email"),
     role: formData.get("role"),
-    locationId: formData.get("locationId") || null,
-    departmentId: formData.get("departmentId") || null,
+    locationId: locationIdVal && locationIdVal !== "" ? Number(locationIdVal) : null,
+    departmentId: departmentIdVal && departmentIdVal !== "" ? Number(departmentIdVal) : null,
     hrLocationIds: formData.get("hrLocationIds") as string | null,
   };
 
