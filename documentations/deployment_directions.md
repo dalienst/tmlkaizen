@@ -71,7 +71,7 @@ Go to the **Variables** tab of your Next.js service and bind the variables:
 ### Step 4: Configure Start & Build Settings
 Railway automatically detects Next.js build configuration. 
 Verify the build scripts in **Settings**:
-* **Build Command**: `npm run build`
-* **Start Command**: `npm run start`
+<!-- * **Build Command**: `npm run build`
+* **Start Command**: `npm run start` -->
 
 Since Railway runs `npm run build` during deployment, the `postbuild` hook (`tsx src/db/migrate.ts`) will execute automatically, ensuring that migrations are initialized on the provisioned PostgreSQL service before the container starts!
