@@ -1,0 +1,99 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
+import { ROLE_LABELS } from "@/lib/constants";
+import type { UserRole } from "@/lib/constants";
+
+interface NavItem {
+  href: string;
+  label: string;
+  icon: string;
+}
+
+const NAV_ITEMS: Record<UserRole, NavItem[]> = {
+  SYSTEM_ADMIN: [
+    { href: "/dashboard/admin", label: "Overview", icon: "⊞" },
+    { href: "/dashboard/admin/locations", label: "Locations", icon: "📍" },
+    { href: "/dashboard/admin/departments", label: "Departments", icon: "🏢" },
+    { href: "/dashboard/admin/core-values", label: "Core Values", icon: "★" },
+    { href: "/dashboard/admin/users", label: "Users", icon: "👥" },
+  ],
+  HR: [
+    { href: "/dashboard/hr", label: "Staff Roster", icon: "👤" },
+  ],
+  GM: [
+    { href: "/dashboard/gm", label: "Overview", icon: "⊞" },
+    { href: "/dashboard/gm/projects", label: "All Projects", icon: "📋" },
+  ],
+  DEPT_MANAGER: [
+    { href: "/dashboard/manager", label: "Projects", icon: "📋" },
+  ],
+};
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const { data: session } = useSession();
+  const role = session?.user?.role as UserRole | undefined;
+  const navItems = role ? NAV_ITEMS[role] : [];
+
+  return (
+    <aside className="dashboard-sidebar">
+      {/* Logo */}
+      <div className="sidebar-logo">
+        <span style={{ color: "var(--color-brand)" }}>Kaizen</span>
+        <span style={{ color: "var(--color-text-sub)", fontWeight: 400 }}> Tracker</span>
+      </div>
+
+      {/* Navigation */}
+      <nav className="sidebar-nav" aria-label="Main navigation">
+        {role && (
+          <div className="sidebar-section-label">{ROLE_LABELS[role]}</div>
+        )}
+        {navItems.map((item) => {
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/dashboard/admin" &&
+              item.href !== "/dashboard/hr" &&
+              item.href !== "/dashboard/gm" &&
+              item.href !== "/dashboard/manager" &&
+              pathname.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`sidebar-nav-item${isActive ? " active" : ""}`}
+            >
+              <span style={{ fontSize: "0.875rem", lineHeight: 1 }} aria-hidden="true">
+                {item.icon}
+              </span>
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Footer: user info + sign out */}
+      <div className="sidebar-footer">
+        {session?.user && (
+          <div style={{ marginBottom: "0.5rem" }}>
+            <div className="font-medium truncate" style={{ fontSize: "0.8125rem" }}>
+              {session.user.name}
+            </div>
+            <div className="text-muted truncate" style={{ fontSize: "0.75rem" }}>
+              {session.user.email}
+            </div>
+          </div>
+        )}
+        <button
+          onClick={() => signOut({ callbackUrl: "/login" })}
+          className="btn btn-ghost btn-sm w-full"
+          style={{ justifyContent: "flex-start", padding: "0.375rem 0.5rem" }}
+        >
+          Sign out
+        </button>
+      </div>
+    </aside>
+  );
+}

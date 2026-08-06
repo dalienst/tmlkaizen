@@ -5,23 +5,40 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "tsx src/db/migrate.ts",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx --env-file=.env.local src/db/migrate.ts",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@auth/drizzle-adapter": "^1.11.3",
+    "@neondatabase/serverless": "^1.1.0",
+    "@vercel/analytics": "^2.0.1",
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.10.0",
+    "drizzle-orm": "^0.45.2",
+    "jose": "^6.2.8",
     "next": "16.3.0",
-    "next-auth": "^4.24.15",
+    "next-auth": "^5.0.0-beta.32",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "react-hot-toast": "^2.6.0",
+    "resend": "^6.18.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
+    "tsx": "^4.23.9",
     "typescript": "^5"
   }
 }
