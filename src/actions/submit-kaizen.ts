@@ -55,6 +55,7 @@ const submissionSchema = z.object({
   improvementIdea: z.string().min(10, "Please describe your improvement idea."),
   expectedBenefit: z.string().min(10, "Please describe the expected benefit."),
   imageUrls: z.array(z.string().url()).max(3),
+  status: z.enum(["PROPOSED", "IN_PROGRESS", "COMPLETED"]).optional().default("PROPOSED"),
 });
 
 async function generateReferenceNumber(): Promise<string> {
@@ -74,6 +75,7 @@ export async function submitKaizen(payload: {
   improvementIdea: string;
   expectedBenefit: string;
   imageUrls: string[];
+  status?: string;
 }) {
   // Verify staff session cookie
   const cookieStore = await cookies();
@@ -96,7 +98,7 @@ export async function submitKaizen(payload: {
     return { error: parsed.error.issues[0].message };
   }
 
-  const { coreValueIds, currentSituation, improvementIdea, expectedBenefit, imageUrls } =
+  const { coreValueIds, currentSituation, improvementIdea, expectedBenefit, imageUrls, status } =
     parsed.data;
 
   const referenceNumber = await generateReferenceNumber();
@@ -108,7 +110,7 @@ export async function submitKaizen(payload: {
     improvementIdea,
     expectedBenefit,
     imageUrls,
-    status: "PROPOSED",
+    status: status || "PROPOSED",
     staffId: staffDbId,
     departmentId,
   });

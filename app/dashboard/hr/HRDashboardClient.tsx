@@ -23,6 +23,7 @@ interface HRDashboardClientProps {
 export default function HRDashboardClient({
   staff,
   departments,
+  locations,
 }: HRDashboardClientProps) {
   const [search, setSearch] = useState("");
   const [filterDeptId, setFilterDeptId] = useState<number | "all">("all");
@@ -105,8 +106,15 @@ export default function HRDashboardClient({
     return matchesSearch && matchesDept && s.isActive;
   });
 
-  const deptName = (id: number) =>
-    departments.find((d) => d.id === id)?.name ?? "—";
+  const getDeptLabel = (d: Department) => {
+    const loc = locations.find((l) => l.id === d.locationId);
+    return loc ? `${d.name} (${loc.name})` : d.name;
+  };
+
+  const deptName = (id: number) => {
+    const d = departments.find((dept) => dept.id === id);
+    return d ? getDeptLabel(d) : "—";
+  };
 
   async function handleAdd(fd: FormData) {
     setAddError(null);
@@ -225,7 +233,7 @@ export default function HRDashboardClient({
           >
             <option value="all">All departments</option>
             {departments.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
+              <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>
             ))}
           </select>
         </div>
@@ -320,7 +328,7 @@ export default function HRDashboardClient({
             <select id="s-dept" name="departmentId" required>
               <option value="">Select department…</option>
               {departments.filter((d) => d.isActive).map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+                <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>
               ))}
             </select>
           </div>
@@ -447,7 +455,7 @@ export default function HRDashboardClient({
                 >
                   <option value="">Select department…</option>
                   {departments.filter((d) => d.isActive).map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
+                    <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>
                   ))}
                 </select>
                 <div style={{ width: "2rem", display: "flex", justifyContent: "center" }}>

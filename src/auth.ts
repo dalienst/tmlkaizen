@@ -8,6 +8,7 @@ import { users } from "@/db/schema";
 import type { UserRole } from "@/lib/constants";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   adapter: DrizzleAdapter(db),
   session: { strategy: "jwt" },
   pages: {
