@@ -25,6 +25,8 @@ interface ManagerDashboardClientProps {
   };
 }
 
+const isImageUrl = (url: string) => /\.(jpg|jpeg|png|webp|gif)($|\?)/i.test(url);
+
 const STATUS_FILTERS = ["ALL", "PROPOSED", "IN_PROGRESS", "COMPLETED"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
@@ -239,20 +241,49 @@ export default function ManagerDashboardClient({
             {selected.imageUrls.length > 0 && (
               <div>
                 <div className="text-sub" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "0.5rem" }}>
-                  Attached photos ({selected.imageUrls.length})
+                  Attachments ({selected.imageUrls.length})
                 </div>
                 <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-                  {selected.imageUrls.map((url, i) => (
-                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                      <Image
-                        src={url}
-                        alt={`Attachment ${i + 1}`}
-                        width={120}
-                        height={90}
-                        style={{ borderRadius: "var(--radius)", objectFit: "cover", border: "1px solid var(--color-border)" }}
-                      />
-                    </a>
-                  ))}
+                  {selected.imageUrls.map((url, i) => {
+                    const isImg = isImageUrl(url);
+                    if (isImg) {
+                      return (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                          <Image
+                            src={url}
+                            alt={`Attachment ${i + 1}`}
+                            width={120}
+                            height={90}
+                            style={{ borderRadius: "var(--radius)", objectFit: "cover", border: "1px solid var(--color-border)" }}
+                          />
+                        </a>
+                      );
+                    }
+                    return (
+                      <a
+                        key={i}
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 p-2 border"
+                        style={{
+                          fontSize: "0.8125rem",
+                          borderColor: "var(--color-border)",
+                          background: "var(--color-surface-2)",
+                          textDecoration: "none",
+                          color: "var(--color-text)",
+                          borderRadius: "var(--radius)",
+                          minWidth: "12rem",
+                        }}
+                      >
+                        <span style={{ fontSize: "1.25rem" }}>📄</span>
+                        <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                          <span className="font-medium" style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>Attachment {i + 1}</span>
+                          <span className="text-sub" style={{ fontSize: "0.6875rem" }}>View / Download file</span>
+                        </div>
+                      </a>
+                    );
+                  })}
                 </div>
               </div>
             )}

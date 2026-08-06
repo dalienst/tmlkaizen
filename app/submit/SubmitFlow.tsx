@@ -46,7 +46,6 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
   const [improvementIdea, setImprovementIdea] = useState("");
   const [expectedBenefit, setExpectedBenefit] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [previews, setPreviews] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("PROPOSED");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -65,17 +64,11 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
       (f) => f.size <= MAX_FILE_SIZE_MB * 1024 * 1024
     );
     setFiles((prev) => [...prev, ...toAdd]);
-    setPreviews((prev) => [
-      ...prev,
-      ...toAdd.map((f) => URL.createObjectURL(f)),
-    ]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function removeFile(i: number) {
-    URL.revokeObjectURL(previews[i]);
     setFiles((prev) => prev.filter((_, idx) => idx !== i));
-    setPreviews((prev) => prev.filter((_, idx) => idx !== i));
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -168,7 +161,6 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
             setImprovementIdea("");
             setExpectedBenefit("");
             setFiles([]);
-            setPreviews([]);
             setStaffName("");
             setStatus("PROPOSED");
           }}
@@ -340,49 +332,46 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
             />
           </div>
 
-          {/* Image upload */}
+          {/* File upload */}
           <div className="field">
             <label>
-              Photos <span className="text-muted" style={{ fontWeight: 400 }}>(optional, up to {MAX_UPLOAD_FILES})</span>
+              Attachments <span className="text-muted" style={{ fontWeight: 400 }}>(optional, up to {MAX_UPLOAD_FILES})</span>
             </label>
-            {previews.length > 0 && (
-              <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap", marginBottom: "0.5rem" }}>
-                {previews.map((url, i) => (
+            {files.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                {files.map((file, i) => (
                   <div
                     key={i}
-                    style={{ position: "relative", width: "5rem", height: "5rem" }}
+                    className="flex items-center justify-between p-2"
+                    style={{
+                      background: "var(--color-surface-2)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "var(--radius)",
+                      fontSize: "0.8125rem",
+                    }}
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={url}
-                      alt={`Preview ${i + 1}`}
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        borderRadius: "var(--radius)",
-                        border: "1px solid var(--color-border)",
-                      }}
-                    />
+                    <div className="flex items-center gap-2 overflow-hidden" style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: "1rem", flexShrink: 0 }}>
+                        {file.type.startsWith("image/") ? "🖼️" : "📄"}
+                      </span>
+                      <span style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", flexGrow: 1 }}>
+                        {file.name}
+                      </span>
+                      <span className="text-muted" style={{ fontSize: "0.75rem", whiteSpace: "nowrap", flexShrink: 0 }}>
+                        ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => removeFile(i)}
                       style={{
-                        position: "absolute",
-                        top: "-0.375rem",
-                        right: "-0.375rem",
-                        width: "1.25rem",
-                        height: "1.25rem",
-                        borderRadius: "9999px",
-                        background: "var(--color-danger)",
-                        color: "#fff",
+                        background: "none",
                         border: "none",
+                        color: "var(--color-danger)",
                         cursor: "pointer",
-                        fontSize: "0.625rem",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 600,
+                        fontSize: "0.875rem",
+                        padding: "0 0.25rem",
+                        flexShrink: 0,
                       }}
                     >
                       ✕
@@ -393,17 +382,17 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
             )}
             {files.length < MAX_UPLOAD_FILES && (
               <label className="upload-zone" style={{ display: "block", cursor: "pointer" }}>
-                <div style={{ fontSize: "1.25rem", marginBottom: "0.25rem" }}>📷</div>
+                <div style={{ fontSize: "1.25rem", marginBottom: "0.25rem" }}>📁</div>
                 <div style={{ fontSize: "0.8125rem" }}>
-                  Click to add photo{files.length > 0 ? " (up to " + (MAX_UPLOAD_FILES - files.length) + " more)" : "s"}
+                  Click to add attachment{files.length > 0 ? " (up to " + (MAX_UPLOAD_FILES - files.length) + " more)" : "s"}
                 </div>
                 <div className="text-muted" style={{ fontSize: "0.75rem" }}>
-                  Max {MAX_FILE_SIZE_MB}MB each · JPG, PNG, WEBP
+                  Max {MAX_FILE_SIZE_MB}MB each · PDF, DOCX, XLSX, images
                 </div>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="image/*"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.txt"
                   multiple
                   style={{ display: "none" }}
                   onChange={handleFileChange}
