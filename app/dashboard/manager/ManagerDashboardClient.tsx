@@ -10,6 +10,7 @@ import { updateProjectStatus } from "@/actions/manager-actions";
 import type { ProjectStatus } from "@/lib/constants";
 import { PROJECT_STATUS_LABELS, formatDate } from "@/lib/constants";
 import Image from "next/image";
+import { toast } from "react-hot-toast";
 
 type ProjectRow = Omit<KaizenProject, "staffId"> & { staffName: string; staffId: string };
 
@@ -50,10 +51,16 @@ export default function ManagerDashboardClient({
 
   function handleStatusChange(projectId: number, newStatus: ProjectStatus) {
     startTransition(async () => {
-      await updateProjectStatus(projectId, newStatus);
-      // Optimistically update selected
-      if (selected?.id === projectId) {
-        setSelected((prev) => prev ? { ...prev, status: newStatus } : null);
+      try {
+        await updateProjectStatus(projectId, newStatus);
+        toast.success(`Project marked as ${PROJECT_STATUS_LABELS[newStatus]}.`);
+        // Optimistically update selected
+        if (selected?.id === projectId) {
+          setSelected((prev) => prev ? { ...prev, status: newStatus } : null);
+        }
+      } catch (err) {
+        const error = err as Error;
+        toast.error(error.message || "Failed to update project status.");
       }
     });
   }

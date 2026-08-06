@@ -10,6 +10,7 @@ import {
   toggleLocationActive,
 } from "@/actions/admin-actions";
 import { formatDate } from "@/lib/constants";
+import { toast } from "react-hot-toast";
 
 interface LocationsTabProps {
   locations: Location[];
@@ -23,6 +24,31 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
   function handleToggle(loc: Location) {
     startTransition(async () => {
       await toggleLocationActive(loc.id, !loc.isActive);
+      toast.success(`Location ${loc.isActive ? "deactivated" : "activated"} successfully.`);
+    });
+  }
+
+  async function handleCreate(fd: FormData) {
+    startTransition(async () => {
+      const res = await createLocation(fd);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        setCreateOpen(false);
+        toast.success("Location created successfully.");
+      }
+    });
+  }
+
+  async function handleEdit(fd: FormData) {
+    startTransition(async () => {
+      const res = await updateLocation(fd);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        setEditTarget(null);
+        toast.success("Location updated successfully.");
+      }
     });
   }
 
@@ -59,7 +85,11 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
               </tr>
             )}
             {locations.map((loc) => (
-              <tr key={loc.id} onClick={() => setEditTarget(loc)} style={{ cursor: "pointer" }}>
+              <tr
+                key={loc.id}
+                onClick={() => setEditTarget(loc)}
+                style={{ cursor: "pointer" }}
+              >
                 <td className="font-medium">{loc.name}</td>
                 <td>
                   <span
@@ -83,7 +113,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
                     <Button
                       size="sm"
                       variant={loc.isActive ? "danger" : "secondary"}
-                      isLoading={isPending}
+                      isLoading={isPending && editTarget?.id !== loc.id}
                       onClick={() => handleToggle(loc)}
                     >
                       {loc.isActive ? "Deactivate" : "Activate"}
@@ -111,6 +141,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
               size="sm"
               type="submit"
               form="create-location-form"
+              isLoading={isPending}
             >
               Save
             </Button>
@@ -119,10 +150,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
       >
         <form
           id="create-location-form"
-          action={async (fd) => {
-            await createLocation(fd);
-            setCreateOpen(false);
-          }}
+          action={handleCreate}
         >
           <div className="field">
             <label htmlFor="loc-name">Location name</label>
@@ -146,6 +174,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
               size="sm"
               type="submit"
               form="edit-location-form"
+              isLoading={isPending}
             >
               Save changes
             </Button>
@@ -155,10 +184,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
         {editTarget && (
           <form
             id="edit-location-form"
-            action={async (fd) => {
-              await updateLocation(fd);
-              setEditTarget(null);
-            }}
+            action={handleEdit}
           >
             <input type="hidden" name="id" value={editTarget.id} />
             <div className="field">

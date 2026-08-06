@@ -9,6 +9,7 @@ import {
   updateCoreValue,
   toggleCoreValueActive,
 } from "@/actions/admin-actions";
+import { toast } from "react-hot-toast";
 
 interface CoreValuesTabProps {
   coreValues: CoreValue[];
@@ -22,6 +23,31 @@ export default function CoreValuesTab({ coreValues }: CoreValuesTabProps) {
   function handleToggle(cv: CoreValue) {
     startTransition(async () => {
       await toggleCoreValueActive(cv.id, !cv.isActive);
+      toast.success(`Core value ${cv.isActive ? "deactivated" : "activated"} successfully.`);
+    });
+  }
+
+  async function handleCreate(fd: FormData) {
+    startTransition(async () => {
+      const res = await createCoreValue(fd);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        setCreateOpen(false);
+        toast.success("Core value created successfully.");
+      }
+    });
+  }
+
+  async function handleEdit(fd: FormData) {
+    startTransition(async () => {
+      const res = await updateCoreValue(fd);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        setEditTarget(null);
+        toast.success("Core value updated successfully.");
+      }
     });
   }
 
@@ -54,29 +80,37 @@ export default function CoreValuesTab({ coreValues }: CoreValuesTabProps) {
             {coreValues.length === 0 && (
               <tr>
                 <td colSpan={5} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>
-                  No core values yet.
+                  No core values yet. Add one to define your focus areas.
                 </td>
               </tr>
             )}
             {coreValues.map((cv) => (
-              <tr key={cv.id}>
-                <td className="text-sub text-center">{cv.sortOrder}</td>
+              <tr
+                key={cv.id}
+                onClick={() => setEditTarget(cv)}
+                style={{ cursor: "pointer" }}
+              >
+                <td><span className="text-muted">{cv.sortOrder}</span></td>
                 <td className="font-medium">{cv.name}</td>
-                <td className="text-sub">
-                  {cv.description ?? <span style={{ color: "var(--color-text-muted)" }}>—</span>}
+                <td className="text-sub" style={{ maxWidth: "20rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {cv.description || <span className="text-muted">—</span>}
                 </td>
                 <td>
-                  <span className={`badge ${cv.isActive ? "badge-completed" : "badge-neutral"}`}>
+                  <span
+                    className={`badge ${cv.isActive ? "badge-completed" : "badge-neutral"}`}
+                  >
                     {cv.isActive ? "Active" : "Inactive"}
                   </span>
                 </td>
-                <td>
+                <td onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setEditTarget(cv)}>Edit</Button>
+                    <Button size="sm" variant="ghost" onClick={() => setEditTarget(cv)}>
+                      Edit
+                    </Button>
                     <Button
                       size="sm"
                       variant={cv.isActive ? "danger" : "secondary"}
-                      isLoading={isPending}
+                      isLoading={isPending && editTarget?.id !== cv.id}
                       onClick={() => handleToggle(cv)}
                     >
                       {cv.isActive ? "Deactivate" : "Activate"}
@@ -97,13 +131,21 @@ export default function CoreValuesTab({ coreValues }: CoreValuesTabProps) {
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="sm" type="submit" form="create-cv-form">Save</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              form="create-cv-form"
+              isLoading={isPending}
+            >
+              Save
+            </Button>
           </>
         }
       >
         <form
           id="create-cv-form"
-          action={async (fd) => { await createCoreValue(fd); setCreateOpen(false); }}
+          action={handleCreate}
           style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
         >
           <div className="field">
@@ -129,14 +171,22 @@ export default function CoreValuesTab({ coreValues }: CoreValuesTabProps) {
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setEditTarget(null)}>Cancel</Button>
-            <Button variant="primary" size="sm" type="submit" form="edit-cv-form">Save changes</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              form="edit-cv-form"
+              isLoading={isPending}
+            >
+              Save changes
+            </Button>
           </>
         }
       >
         {editTarget && (
           <form
             id="edit-cv-form"
-            action={async (fd) => { await updateCoreValue(fd); setEditTarget(null); }}
+            action={handleEdit}
             style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
           >
             <input type="hidden" name="id" value={editTarget.id} />

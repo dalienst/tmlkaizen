@@ -9,6 +9,7 @@ import {
   updateDepartment,
   toggleDepartmentActive,
 } from "@/actions/admin-actions";
+import { toast } from "react-hot-toast";
 
 interface DepartmentsTabProps {
   departments: Department[];
@@ -35,6 +36,31 @@ export default function DepartmentsTab({
   function handleToggle(dept: Department) {
     startTransition(async () => {
       await toggleDepartmentActive(dept.id, !dept.isActive);
+      toast.success(`Department ${dept.isActive ? "deactivated" : "activated"} successfully.`);
+    });
+  }
+
+  async function handleCreate(fd: FormData) {
+    startTransition(async () => {
+      const res = await createDepartment(fd);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        setCreateOpen(false);
+        toast.success("Department created successfully.");
+      }
+    });
+  }
+
+  async function handleEdit(fd: FormData) {
+    startTransition(async () => {
+      const res = await updateDepartment(fd);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        setEditTarget(null);
+        toast.success("Department updated successfully.");
+      }
     });
   }
 
@@ -44,30 +70,30 @@ export default function DepartmentsTab({
         <div>
           <div className="font-semibold" style={{ fontSize: "0.9375rem" }}>Departments</div>
           <div className="text-sub" style={{ fontSize: "0.8125rem" }}>
-            Business units within locations
+            Operational units within branches
           </div>
         </div>
-        <div className="flex gap-2">
-          <select
-            value={filterLocationId}
-            onChange={(e) =>
-              setFilterLocationId(
-                e.target.value === "all" ? "all" : Number(e.target.value)
-              )
-            }
-            style={{ width: "auto" }}
-          >
-            <option value="all">All locations</option>
-            {locations.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-          </select>
-          <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
-            + Add department
-          </Button>
-        </div>
+        <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+          + Add department
+        </Button>
+      </div>
+
+      {/* Filter */}
+      <div className="flex mb-4">
+        <select
+          value={filterLocationId}
+          onChange={(e) =>
+            setFilterLocationId(
+              e.target.value === "all" ? "all" : Number(e.target.value)
+            )
+          }
+          style={{ width: "auto" }}
+        >
+          <option value="all">All locations</option>
+          {locations.map((l) => (
+            <option key={l.id} value={l.id}>{l.name}</option>
+          ))}
+        </select>
       </div>
 
       <div className="card overflow-hidden">
@@ -89,11 +115,17 @@ export default function DepartmentsTab({
               </tr>
             )}
             {filtered.map((dept) => (
-              <tr key={dept.id} onClick={() => setEditTarget(dept)}>
+              <tr
+                key={dept.id}
+                onClick={() => setEditTarget(dept)}
+                style={{ cursor: "pointer" }}
+              >
                 <td className="font-medium">{dept.name}</td>
                 <td className="text-sub">{locationName(dept.locationId)}</td>
                 <td>
-                  <span className={`badge ${dept.isActive ? "badge-completed" : "badge-neutral"}`}>
+                  <span
+                    className={`badge ${dept.isActive ? "badge-completed" : "badge-neutral"}`}
+                  >
                     {dept.isActive ? "Active" : "Inactive"}
                   </span>
                 </td>
@@ -105,7 +137,7 @@ export default function DepartmentsTab({
                     <Button
                       size="sm"
                       variant={dept.isActive ? "danger" : "secondary"}
-                      isLoading={isPending}
+                      isLoading={isPending && editTarget?.id !== dept.id}
                       onClick={() => handleToggle(dept)}
                     >
                       {dept.isActive ? "Deactivate" : "Activate"}
@@ -126,13 +158,13 @@ export default function DepartmentsTab({
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setCreateOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="sm" type="submit" form="create-dept-form">Save</Button>
+            <Button variant="primary" size="sm" type="submit" form="create-dept-form" isLoading={isPending}>Save</Button>
           </>
         }
       >
         <form
           id="create-dept-form"
-          action={async (fd) => { await createDepartment(fd); setCreateOpen(false); }}
+          action={handleCreate}
           style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
         >
           <div className="field">
@@ -159,14 +191,22 @@ export default function DepartmentsTab({
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setEditTarget(null)}>Cancel</Button>
-            <Button variant="primary" size="sm" type="submit" form="edit-dept-form">Save changes</Button>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              form="edit-dept-form"
+              isLoading={isPending}
+            >
+              Save changes
+            </Button>
           </>
         }
       >
         {editTarget && (
           <form
             id="edit-dept-form"
-            action={async (fd) => { await updateDepartment(fd); setEditTarget(null); }}
+            action={handleEdit}
           >
             <input type="hidden" name="id" value={editTarget.id} />
             <div className="field">

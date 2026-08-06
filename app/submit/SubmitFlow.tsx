@@ -6,6 +6,7 @@ import { StepBar } from "@/components/ui/StepBar";
 import { Button } from "@/components/ui/Button";
 import { validateStaff, submitKaizen } from "@/actions/submit-kaizen";
 import { MAX_UPLOAD_FILES, MAX_FILE_SIZE_MB } from "@/lib/constants";
+import { toast } from "react-hot-toast";
 
 interface SubmitFlowProps {
   coreValues: CoreValue[];
@@ -31,9 +32,11 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
     setIsValidating(false);
     if (result.error) {
       setValidateError(result.error);
+      toast.error(result.error);
     } else {
       setStaffName(result.staffName ?? "");
       setStage("form");
+      toast.success(`Identity verified. Welcome, ${result.staffName}!`);
     }
   }
 
@@ -112,9 +115,11 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
 
     if (result.error) {
       setSubmitError(result.error);
+      toast.error(result.error);
     } else {
       setReferenceNumber(result.referenceNumber ?? "");
       setStage("success");
+      toast.success("Kaizen submitted successfully!");
     }
   }
 

@@ -8,7 +8,7 @@ import {
   hrLocations,
   coreValues,
 } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, and, not } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import bcrypt from "bcryptjs";
@@ -120,10 +120,11 @@ function generatePassword(length = 12): string {
 const createUserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
+  staffId: z.string().optional().nullable(),
   role: z.enum(["HR", "GM", "DEPT_MANAGER"]),
   locationId: z.number().nullable(),
   departmentId: z.number().nullable(),
-  hrLocationIds: z.string().optional(), // JSON array of location IDs for HR
+  hrLocationIds: z.string().optional().nullable(), // JSON array of location IDs for HR
 });
 
 export async function createUser(formData: FormData) {
@@ -135,6 +136,7 @@ export async function createUser(formData: FormData) {
   const raw = {
     name: formData.get("name"),
     email: formData.get("email"),
+    staffId: (formData.get("staffId") as string | null) || null,
     role: formData.get("role"),
     locationId: locationIdVal && locationIdVal !== "" ? Number(locationIdVal) : null,
     departmentId: departmentIdVal && departmentIdVal !== "" ? Number(departmentIdVal) : null,
@@ -146,7 +148,7 @@ export async function createUser(formData: FormData) {
     return { error: "Please fill in all required fields correctly." };
   }
 
-  const { name, email, role, locationId, departmentId, hrLocationIds } =
+  const { name, email, staffId, role, locationId, departmentId, hrLocationIds } =
     parsed.data;
 
   // Check for existing email
@@ -163,6 +165,7 @@ export async function createUser(formData: FormData) {
     .values({
       name,
       email,
+      staffId: staffId || null,
       passwordHash,
       role: role as UserRole,
       locationId: locationId ?? null,
@@ -197,21 +200,74 @@ export async function toggleUserActive(id: number, isActive: boolean) {
   revalidatePath("/dashboard/admin");
 }
 
-export async function updateUserRole(formData: FormData) {
+const updateUserSchema = z.object({
+  id: z.number(),
+  name: z.string().min(1),
+  email: z.string().email(),
+  staffId: z.string().optional().nullable(),
+  role: z.enum(["HR", "GM", "DEPT_MANAGER"]),
+  locationId: z.number().nullable(),
+  departmentId: z.number().nullable(),
+  hrLocationIds: z.string().optional().nullable(),
+});
+
+export async function updateUser(formData: FormData) {
   await assertAdmin();
-  const id = Number(formData.get("id"));
-  const role = formData.get("role") as UserRole;
-  const locationId = formData.get("locationId")
-    ? Number(formData.get("locationId"))
-    : null;
-  const departmentId = formData.get("departmentId")
-    ? Number(formData.get("departmentId"))
-    : null;
+
+  const idVal = formData.get("id");
+  const locationIdVal = formData.get("locationId");
+  const departmentIdVal = formData.get("departmentId");
+
+  const raw = {
+    id: idVal ? Number(idVal) : null,
+    name: formData.get("name"),
+    email: formData.get("email"),
+    staffId: (formData.get("staffId") as string | null) || null,
+    role: formData.get("role"),
+    locationId: locationIdVal && locationIdVal !== "" ? Number(locationIdVal) : null,
+    departmentId: departmentIdVal && departmentIdVal !== "" ? Number(departmentIdVal) : null,
+    hrLocationIds: formData.get("hrLocationIds") as string | null,
+  };
+
+  const parsed = updateUserSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { error: "Please fill in all required fields correctly." };
+  }
+
+  const { id, name, email, staffId, role, locationId, departmentId, hrLocationIds } =
+    parsed.data;
+
+  // Check if email already used by someone else
+  const existing = await db.query.users.findFirst({
+    where: and(eq(users.email, email), not(eq(users.id, id))),
+  });
+  if (existing) return { error: "A user with this email already exists." };
+
   await db
     .update(users)
-    .set({ role, locationId, departmentId })
+    .set({
+      name,
+      email,
+      staffId: staffId || null,
+      role,
+      locationId: role === "GM" ? locationId : null,
+      departmentId: role === "DEPT_MANAGER" ? departmentId : null,
+    })
     .where(eq(users.id, id));
+
+  // Sync HR location mapping
+  await db.delete(hrLocations).where(eq(hrLocations.hrUserId, id));
+  if (role === "HR" && hrLocationIds) {
+    const locIds: number[] = JSON.parse(hrLocationIds);
+    if (locIds.length > 0) {
+      await db.insert(hrLocations).values(
+        locIds.map((lid) => ({ hrUserId: id, locationId: lid }))
+      );
+    }
+  }
+
   revalidatePath("/dashboard/admin");
+  return { success: true };
 }
 
 export async function resendCredentials(userId: number) {
