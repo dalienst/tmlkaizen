@@ -79,12 +79,19 @@ export default async function GMProjectsPage() {
   }));
 
   return (
-    <div className="dashboard-main p-4">
-      <GMProjectsClient
-        projects={projectRows}
-        departments={allDepartments}
-        coreValues={allCoreValues}
-      />
+    <div className="dashboard-main">
+      <div className="dashboard-header">
+        <h1 className="font-semibold" style={{ fontSize: "1rem" }}>Projects</h1>
+      </div>
+      <div className="dashboard-content">
+
+        <GMProjectsClient
+          projects={projectRows}
+          departments={allDepartments}
+          coreValues={allCoreValues}
+        />
+
+      </div>
     </div>
   );
 }
