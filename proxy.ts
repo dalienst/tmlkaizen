@@ -3,6 +3,13 @@ import { auth } from "@/auth";
 import { ROLE_DASHBOARD } from "@/lib/constants";
 import type { UserRole } from "@/lib/constants";
 
+import type { NextRequest } from "next/server";
+import type { Session } from "next-auth";
+
+interface AuthRequest extends NextRequest {
+  auth: Session | null;
+}
+
 // Route → minimum required role(s)
 const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/dashboard/admin": ["SYSTEM_ADMIN"],
@@ -12,7 +19,7 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
 };
 
 export default auth((req) => {
-  const { nextUrl, auth: session } = req as any;
+  const { nextUrl, auth: session } = req as AuthRequest;
   const pathname: string = nextUrl.pathname;
 
   // ── Protect all /dashboard/* routes ──────────────────────────────────────
@@ -38,7 +45,7 @@ export default auth((req) => {
 
   // ── Redirect logged-in users away from login / setup ─────────────────────
   if (pathname === "/login" || pathname === "/setup") {
-    const session2 = (req as any).auth;
+    const session2 = req.auth;
     if (session2?.user?.role) {
       const dashboard = ROLE_DASHBOARD[session2.user.role as UserRole];
       if (dashboard) {

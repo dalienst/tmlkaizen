@@ -1,4 +1,19 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap");
+/* ─── Self-hosted Google Sans ────────────────────────────────────────────────── */
+@font-face {
+  font-family: "Google Sans";
+  src: url("/fonts/GoogleSans-VariableFont.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Google Sans";
+  src: url("/fonts/GoogleSans-Italic.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
 
 /* ─── Design Tokens ─────────────────────────────────────────────────────────── */
 :root {
@@ -69,7 +84,7 @@ html {
 }
 
 body {
-  font-family: "Inter", system-ui, sans-serif;
+  font-family: "Google Sans", Inter, system-ui, sans-serif;
   font-size: 0.875rem;  /* 14px base */
   line-height: 1.5;
   color: var(--color-text);
@@ -401,7 +416,7 @@ textarea {
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  font-family: inherit;
+  font-family: "Google Sans", Inter, system-ui, sans-serif;
   font-size: 0.875rem;
   font-weight: 500;
   line-height: 1;
