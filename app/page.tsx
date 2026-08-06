@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { db } from "@/db";
 import { coreValues } from "@/db/schema";
 import { eq, asc } from "drizzle-orm";
@@ -5,7 +7,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const metadata = {
-  title: "Kaizen Portal | Tamarind",
+  title: "Kaizen Portal | Tamarind Group",
   description: "Continuous improvement platform at Tamarind branches.",
 };
 
