@@ -64,18 +64,25 @@ export default async function ProjectDetailPage({ params }: PageProps) {
     (user.role === "DEPT_MANAGER" && user.departmentId === project.departmentId);
 
   return (
-    <div style={{ maxWidth: "56rem", margin: "0 auto", padding: "1.5rem 1rem" }}>
-      <div style={{ marginBottom: "1.5rem" }}>
-        <Link href="/dashboard" className="text-link" style={{ fontSize: "0.875rem", textDecoration: "none" }}>
-          ← Back to Dashboard
-        </Link>
+    <div className="dashboard-main">
+      <div className="dashboard-header">
+        <div>
+          <Link href="/dashboard" className="text-sub" style={{ fontSize: "0.8125rem", textDecoration: "none" }}>
+            ← Dashboard
+          </Link>
+          <h1 className="font-semibold" style={{ fontSize: "1rem", marginTop: "0.25rem" }}>
+            Project Details
+          </h1>
+        </div>
       </div>
 
-      <ProjectDetailClient
-        project={project}
-        cvMap={cvMap}
-        canEdit={canEdit}
-      />
+      <div className="dashboard-content">
+        <ProjectDetailClient
+          project={project}
+          cvMap={cvMap}
+          canEdit={canEdit}
+        />
+      </div>
     </div>
   );
 }
