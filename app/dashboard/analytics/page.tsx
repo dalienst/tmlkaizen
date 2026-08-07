@@ -26,9 +26,9 @@ export default async function AnalyticsPage() {
   if (!session) redirect("/login");
 
   const role = session.user.role;
-  const userId = Number(session.user.id);
+  const userId = session.user.id as string;
 
-  let allowedDeptIds: number[] | null = null;
+  let allowedDeptIds: string[] | null = null;
 
   if (role === "DEPT_MANAGER") {
     allowedDeptIds = session.user.departmentId ? [session.user.departmentId] : [];
@@ -87,7 +87,7 @@ export default async function AnalyticsPage() {
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   // Department breakdown
-  const deptMap2: Record<number, { name: string; total: number; completed: number; inProgress: number; proposed: number; rate: number }> = {};
+  const deptMap2: Record<string, { name: string; total: number; completed: number; inProgress: number; proposed: number; rate: number }> = {};
   for (const p of projects) {
     const dId = p.project.departmentId;
     if (!deptMap2[dId]) {
@@ -104,7 +104,7 @@ export default async function AnalyticsPage() {
   const deptRows = Object.values(deptMap2).sort((a, b) => b.total - a.total);
 
   // Top staff contributors
-  const staffMap: Record<number, { name: string; staffId: string; total: number; completed: number }> = {};
+  const staffMap: Record<string, { name: string; staffId: string; total: number; completed: number }> = {};
   for (const p of projects) {
     const sId = p.project.staffId;
     if (!staffMap[sId]) {
@@ -114,7 +114,7 @@ export default async function AnalyticsPage() {
     if (p.project.status === "COMPLETED") staffMap[sId].completed++;
   }
   const topStaff = Object.entries(staffMap)
-    .map(([id, v]) => ({ id: Number(id), ...v }))
+    .map(([id, v]) => ({ id, ...v }))
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 

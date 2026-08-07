@@ -20,10 +20,10 @@ export default async function StaffPage() {
   if (!session) redirect("/login");
 
   const role = session.user.role;
-  const userId = Number(session.user.id);
+  const userId = session.user.id as string;
 
   // Determine which department IDs this user can see
-  let allowedDeptIds: number[] | null = null; // null = all
+  let allowedDeptIds: string[] | null = null; // null = all
 
   if (role === "DEPT_MANAGER") {
     const deptId = session.user.departmentId;

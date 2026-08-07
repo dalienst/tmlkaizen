@@ -51,7 +51,7 @@ export default function ManagerDashboardClient({
     return matchesStatus && matchesSearch;
   });
 
-  function handleStatusChange(projectId: number, newStatus: ProjectStatus) {
+  function handleStatusChange(projectId: string, newStatus: ProjectStatus) {
     startTransition(async () => {
       try {
         await updateProjectStatus(projectId, newStatus);

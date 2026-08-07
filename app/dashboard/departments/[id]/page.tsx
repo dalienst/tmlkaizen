@@ -17,8 +17,7 @@ export default async function DepartmentDetailPage({ params }: PageProps) {
   if (!session) redirect("/login");
 
   const { id: idStr } = await params;
-  const id = Number(idStr);
-  if (isNaN(id)) notFound();
+  const id = idStr;
 
   // Load department and location details
   const dept = await db.query.departments.findFirst({
@@ -38,13 +37,13 @@ export default async function DepartmentDetailPage({ params }: PageProps) {
     allowed = true;
   } else if (user.role === "GM") {
     // Check against gm_locations (multi-location support)
-    const gmLocs = await db.select({ locationId: gmLocations.locationId }).from(gmLocations).where(eq(gmLocations.gmUserId, Number(user.id)));
+    const gmLocs = await db.select({ locationId: gmLocations.locationId }).from(gmLocations).where(eq(gmLocations.gmUserId, user.id as string));
     allowed = gmLocs.some((gl) => gl.locationId === dept.locationId);
   } else if (user.role === "DEPT_MANAGER") {
     allowed = user.departmentId === id;
   } else if (user.role === "HR") {
     const hrLocs = await db.query.hrLocations.findMany({
-      where: eq(hrLocations.hrUserId, Number(user.id)),
+      where: eq(hrLocations.hrUserId, user.id as string),
     });
     allowed = hrLocs.some((hl) => hl.locationId === dept.locationId);
   }

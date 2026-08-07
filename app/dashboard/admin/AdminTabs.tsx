@@ -26,8 +26,8 @@ interface AdminTabsProps {
   departments: Department[];
   users: User[];
   coreValues: CoreValue[];
-  hrLocationsMapped: { hrUserId: number; locationId: number }[];
-  gmLocationsMapped: { gmUserId: number; locationId: number }[];
+  hrLocationsMapped: { hrUserId: string; locationId: string }[];
+  gmLocationsMapped: { gmUserId: string; locationId: string }[];
 }
 
 export default function AdminTabs({

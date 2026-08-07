@@ -22,7 +22,7 @@ export default function DepartmentsTab({
 }: DepartmentsTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Department | null>(null);
-  const [filterLocationId, setFilterLocationId] = useState<number | "all">("all");
+  const [filterLocationId, setFilterLocationId] = useState<string | "all">("all");
   const [isPending, startTransition] = useTransition();
 
   const filtered =
@@ -30,7 +30,7 @@ export default function DepartmentsTab({
       ? departments
       : departments.filter((d) => d.locationId === filterLocationId);
 
-  const locationName = (id: number) =>
+  const locationName = (id: string) =>
     locations.find((l) => l.id === id)?.name ?? "—";
 
   function handleToggle(dept: Department) {
@@ -82,11 +82,7 @@ export default function DepartmentsTab({
       <div className="flex mb-4">
         <select
           value={filterLocationId}
-          onChange={(e) =>
-            setFilterLocationId(
-              e.target.value === "all" ? "all" : Number(e.target.value)
-            )
-          }
+          onChange={(e) => setFilterLocationId(e.target.value)}
           style={{ width: "auto" }}
         >
           <option value="all">All locations</option>
@@ -101,6 +97,7 @@ export default function DepartmentsTab({
           <thead>
             <tr>
               <th>Name</th>
+              <th>Code</th>
               <th>Location</th>
               <th>Status</th>
               <th style={{ width: "8rem" }}>Actions</th>
@@ -109,7 +106,7 @@ export default function DepartmentsTab({
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>
+                <td colSpan={5} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>
                   No departments found.
                 </td>
               </tr>
@@ -121,6 +118,7 @@ export default function DepartmentsTab({
                 style={{ cursor: "pointer" }}
               >
                 <td className="font-medium">{dept.name}</td>
+                <td><code style={{ fontSize: "0.8125rem" }}>{dept.code}</code></td>
                 <td className="text-sub">{locationName(dept.locationId)}</td>
                 <td>
                   <span
@@ -172,6 +170,10 @@ export default function DepartmentsTab({
             <input id="dept-name" name="name" type="text" placeholder="e.g. Kitchen" required />
           </div>
           <div className="field">
+            <label htmlFor="dept-code">Department code <span className="text-muted">(optional, e.g. KIT)</span></label>
+            <input id="dept-code" name="code" type="text" placeholder="Auto-generated if left blank" style={{ textTransform: "uppercase" }} />
+          </div>
+          <div className="field">
             <label htmlFor="dept-location">Location</label>
             <select id="dept-location" name="locationId" required>
               <option value="">Select location…</option>
@@ -207,11 +209,16 @@ export default function DepartmentsTab({
           <form
             id="edit-dept-form"
             action={handleEdit}
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
           >
             <input type="hidden" name="id" value={editTarget.id} />
             <div className="field">
               <label htmlFor="dept-edit-name">Department name</label>
               <input id="dept-edit-name" name="name" type="text" defaultValue={editTarget.name} required />
+            </div>
+            <div className="field">
+              <label htmlFor="dept-edit-code">Department code</label>
+              <input id="dept-edit-code" name="code" type="text" defaultValue={editTarget.code} required style={{ textTransform: "uppercase" }} />
             </div>
           </form>
         )}

@@ -19,10 +19,10 @@ export default async function DepartmentsPage() {
   if (!session) redirect("/login");
 
   const role = session.user.role;
-  const userId = Number(session.user.id);
+  const userId = session.user.id as string;
 
   // Determine which departments this user can see
-  let allowedDeptIds: number[] | null = null;
+  let allowedDeptIds: string[] | null = null;
 
   if (role === "DEPT_MANAGER") {
     // Manager sees only their own department

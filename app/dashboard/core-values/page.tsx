@@ -18,10 +18,10 @@ export default async function CoreValuesPage() {
   if (!session) redirect("/login");
 
   const role = session.user.role;
-  const userId = Number(session.user.id);
+  const userId = session.user.id as string;
 
   // Determine department scope for counting
-  let allowedDeptIds: number[] | null = null;
+  let allowedDeptIds: string[] | null = null;
 
   if (role === "DEPT_MANAGER") {
     allowedDeptIds = session.user.departmentId ? [session.user.departmentId] : [];

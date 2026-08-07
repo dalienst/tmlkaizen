@@ -41,7 +41,7 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
   }
 
   // ── Step 2 state ─────────────────────────────────────────────────────────────
-  const [selectedCVs, setSelectedCVs] = useState<number[]>([]);
+  const [selectedCVs, setSelectedCVs] = useState<string[]>([]);
   const [currentSituation, setCurrentSituation] = useState("");
   const [improvementIdea, setImprovementIdea] = useState("");
   const [expectedBenefit, setExpectedBenefit] = useState("");
@@ -51,7 +51,7 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function toggleCV(id: number) {
+  function toggleCV(id: string) {
     setSelectedCVs((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]
     );

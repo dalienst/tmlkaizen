@@ -21,7 +21,7 @@ export default async function GMPage({
     redirect("/dashboard");
   }
 
-  const userId = Number(session.user.id);
+  const userId = session.user.id as string;
   const { loc } = await searchParams;
 
   // Load all GM locations
@@ -54,7 +54,7 @@ export default async function GMPage({
     .where(inArray(locations.id, gmLocationIds));
 
   // Selected location (default to first)
-  const selectedLocId = loc && gmLocationIds.includes(Number(loc)) ? Number(loc) : gmLocationIds[0];
+  const selectedLocId = loc && gmLocationIds.includes(loc) ? loc : gmLocationIds[0];
   const selectedLoc = allLocations.find((l) => l.id === selectedLocId);
 
   // Get departments for selected location

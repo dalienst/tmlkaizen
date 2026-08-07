@@ -17,7 +17,7 @@ import ProjectStatusForm from "@/components/ui/ProjectStatusForm";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const cv = await db.query.coreValues.findFirst({ where: eq(coreValues.id, Number(id)) });
+  const cv = await db.query.coreValues.findFirst({ where: eq(coreValues.id, id) });
   return { title: cv ? `${cv.name} | Core Values | Kaizen Tracker` : "Core Value | Kaizen Tracker" };
 }
 
@@ -27,14 +27,14 @@ export default async function CoreValueDetailPage({ params }: { params: Promise<
   if (!session) redirect("/login");
 
   const role = session.user.role;
-  const userId = Number(session.user.id);
-  const cvId = Number(id);
+  const userId = session.user.id as string;
+  const cvId = id;
 
   const cv = await db.query.coreValues.findFirst({ where: eq(coreValues.id, cvId) });
   if (!cv) notFound();
 
   // Determine department scope
-  let allowedDeptIds: number[] | null = null;
+  let allowedDeptIds: string[] | null = null;
 
   if (role === "DEPT_MANAGER") {
     allowedDeptIds = session.user.departmentId ? [session.user.departmentId] : [];

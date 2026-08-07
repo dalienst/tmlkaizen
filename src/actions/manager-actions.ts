@@ -12,7 +12,7 @@ import { z } from "zod";
 const ALLOWED_STATUS_ROLES = ["DEPT_MANAGER", "SYSTEM_ADMIN", "GM", "HR"] as const;
 type AllowedRole = (typeof ALLOWED_STATUS_ROLES)[number];
 
-export async function updateProjectStatus(projectId: number, newStatus: ProjectStatus) {
+export async function updateProjectStatus(projectId: string, newStatus: ProjectStatus) {
   const session = await auth();
   if (!session || !ALLOWED_STATUS_ROLES.includes(session.user.role as AllowedRole)) {
     throw new Error("Unauthorized");
@@ -66,7 +66,7 @@ export async function updateUserProfile(formData: FormData) {
   }
 
   const { name, currentPassword, newPassword } = parsed.data;
-  const userId = Number(session.user.id);
+  const userId = session.user.id as string;
 
   const user = await db.query.users.findFirst({ where: eq(users.id, userId) });
   if (!user) return { error: "User not found." };
