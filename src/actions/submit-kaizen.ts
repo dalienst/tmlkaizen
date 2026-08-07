@@ -50,7 +50,7 @@ export async function validateStaff(formData: FormData) {
 // ─── Step 2: Submit kaizen project ────────────────────────────────────────────
 
 const submissionSchema = z.object({
-  coreValueIds: z.array(z.number()).min(1, "Select at least one core value."),
+  coreValueIds: z.array(z.string().uuid()).min(1, "Select at least one core value."),
   currentSituation: z.string().min(10, "Please describe the current situation."),
   improvementIdea: z.string().min(10, "Please describe your improvement idea."),
   expectedBenefit: z.string().min(10, "Please describe the expected benefit."),
@@ -70,7 +70,7 @@ async function generateReferenceNumber(): Promise<string> {
 }
 
 export async function submitKaizen(payload: {
-  coreValueIds: number[];
+  coreValueIds: string[];
   currentSituation: string;
   improvementIdea: string;
   expectedBenefit: string;
@@ -82,13 +82,13 @@ export async function submitKaizen(payload: {
   const token = cookieStore.get("staff_session")?.value;
   if (!token) return { error: "Session expired. Please validate your identity again." };
 
-  let staffDbId: number;
-  let departmentId: number;
+  let staffDbId: string;
+  let departmentId: string;
 
   try {
     const { payload: jwt } = await jwtVerify(token, SECRET);
-    staffDbId = jwt.staffDbId as number;
-    departmentId = jwt.departmentId as number;
+    staffDbId = jwt.staffDbId as string;
+    departmentId = jwt.departmentId as string;
   } catch {
     return { error: "Session expired. Please validate your identity again." };
   }

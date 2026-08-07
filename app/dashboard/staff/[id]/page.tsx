@@ -11,7 +11,7 @@ import ProjectStatusForm from "@/components/ui/ProjectStatusForm";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const member = await db.query.staff.findFirst({ where: eq(staff.id, Number(id)) });
+  const member = await db.query.staff.findFirst({ where: eq(staff.id, id) });
   return { title: member ? `${member.name} | Staff | Kaizen Tracker` : "Staff Member | Kaizen Tracker" };
 }
 
@@ -20,7 +20,7 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
   const session = await auth();
   if (!session) redirect("/login");
 
-  const staffId = Number(id);
+  const staffId = id;
   const member = await db.query.staff.findFirst({ where: eq(staff.id, staffId) });
   if (!member) notFound();
 

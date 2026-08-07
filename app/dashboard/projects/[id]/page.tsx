@@ -15,8 +15,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
   if (!session) redirect("/login");
 
   const { id: idStr } = await params;
-  const id = Number(idStr);
-  if (isNaN(id)) notFound();
+  const id = idStr;
 
   // Load project with staff and department relations
   const project = await db.query.kaizenProjects.findFirst({
@@ -45,7 +44,7 @@ export default async function ProjectDetailPage({ params }: PageProps) {
     allowed = user.departmentId === project.departmentId;
   } else if (user.role === "HR") {
     const hrLocs = await db.query.hrLocations.findMany({
-      where: eq(hrLocations.hrUserId, Number(user.id)),
+      where: eq(hrLocations.hrUserId, user.id as string),
     });
     allowed = hrLocs.some((hl) => hl.locationId === project.department.locationId);
   }

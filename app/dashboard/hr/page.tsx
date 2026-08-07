@@ -15,7 +15,7 @@ export default async function HRPage() {
   }
 
   // Get locations this HR user is assigned to
-  let assignedLocationIds: number[] = [];
+  let assignedLocationIds: string[] = [];
 
   if (session.user.role === "SYSTEM_ADMIN") {
     const allLocs = await db.select({ id: locations.id }).from(locations);
@@ -24,7 +24,7 @@ export default async function HRPage() {
     const hrLocs = await db
       .select({ locationId: hrLocations.locationId })
       .from(hrLocations)
-      .where(eq(hrLocations.hrUserId, Number(session.user.id)));
+      .where(eq(hrLocations.hrUserId, session.user.id as string));
     assignedLocationIds = hrLocs.map((r) => r.locationId);
   }
 
@@ -55,7 +55,7 @@ export default async function HRPage() {
     db.select().from(locations).where(
       assignedLocationIds.length > 0
         ? inArray(locations.id, assignedLocationIds)
-        : eq(locations.id, -1)
+        : eq(locations.id, "00000000-0000-0000-0000-000000000000")
     ),
   ]);
 

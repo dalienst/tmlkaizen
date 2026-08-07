@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { staff } from "@/db/schema";
+import { staff, departments } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
@@ -17,7 +17,7 @@ const staffSchema = z.object({
   staffId: z.string().min(1),
   name: z.string().min(1),
   email: z.string().email(),
-  departmentId: z.coerce.number(),
+  departmentId: z.string().uuid(),
 });
 
 export async function addStaffMember(formData: FormData) {
@@ -45,15 +45,16 @@ export async function addStaffMember(formData: FormData) {
 
 export async function updateStaffMember(formData: FormData) {
   await assertHR();
-  const id = Number(formData.get("id"));
+  const id = formData.get("id") as string;
   const name = (formData.get("name") as string).trim();
   const email = (formData.get("email") as string).trim();
-  if (!name || !email) return { error: "Name and email are required." };
-  await db.update(staff).set({ name, email }).where(eq(staff.id, id));
+  const departmentId = formData.get("departmentId") as string;
+  if (!name || !email || !id || !departmentId) return { error: "All fields are required." };
+  await db.update(staff).set({ name, email, departmentId }).where(eq(staff.id, id));
   revalidatePath("/dashboard/hr");
 }
 
-export async function removeStaffMember(id: number) {
+export async function removeStaffMember(id: string) {
   await assertHR();
   await db.update(staff).set({ isActive: false }).where(eq(staff.id, id));
   revalidatePath("/dashboard/hr");
@@ -61,17 +62,39 @@ export async function removeStaffMember(id: number) {
 
 /** Bulk import staff from parsed CSV rows */
 export async function bulkImportStaff(
-  rows: { staffId: string; name: string; email: string; departmentId: number }[]
+  rows: { staffId: string; name: string; email: string; departmentCode: string }[]
 ) {
   await assertHR();
   if (rows.length === 0) return { error: "No rows to import." };
 
+  // Fetch all departments to lookup UUIDs by their codes
+  const allDepts = await db.select({ id: departments.id, code: departments.code }).from(departments);
+  const codeMap = Object.fromEntries(allDepts.map((d) => [d.code.toUpperCase(), d.id]));
+
+  // Map input rows to database values
+  const toInsert = rows
+    .map((row) => {
+      const departmentId = codeMap[row.departmentCode.toUpperCase()];
+      if (!departmentId) return null;
+      return {
+        staffId: row.staffId,
+        name: row.name,
+        email: row.email,
+        departmentId,
+      };
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  if (toInsert.length === 0) {
+    return { error: "No departments in the CSV matched any registered department codes." };
+  }
+
   // Insert ignoring duplicates using onConflictDoNothing
   await db
     .insert(staff)
-    .values(rows)
+    .values(toInsert)
     .onConflictDoNothing({ target: staff.staffId });
 
   revalidatePath("/dashboard/hr");
-  return { imported: rows.length };
+  return { imported: toInsert.length };
 }

@@ -8,18 +8,18 @@ import type { ProjectStatus } from "@/lib/constants";
 import Link from "next/link";
 
 interface ProjectRow {
-  id: number;
+  id: string;
   referenceNumber: string;
   currentSituation: string;
   improvementIdea: string;
   expectedBenefit: string;
   status: string;
   createdAt: Date;
-  coreValueIds: number[];
+  coreValueIds: string[];
   staffName: string;
   staffId: string;
   deptName: string;
-  deptId: number;
+  deptId: string;
   locName: string;
 }
 
@@ -39,7 +39,7 @@ export default function GMProjectsClient({
 }: GMProjectsClientProps) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
-  const [deptFilter, setDeptFilter] = useState<number | "all">("all");
+  const [deptFilter, setDeptFilter] = useState<string | "all">("all");
 
   const cvMap = Object.fromEntries(coreValues.map((cv) => [cv.id, cv.name]));
 
@@ -58,25 +58,25 @@ export default function GMProjectsClient({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
       {/* Title */}
-      <div className="card p-5">
-        <h1 className="font-semibold" style={{ fontSize: "1.25rem", margin: 0 }}>
-          Submissions Log
-        </h1>
-        <p className="text-sub" style={{ fontSize: "0.8125rem", marginTop: "0.25rem" }}>
-          Full query portal for continuous improvement ideas. Click on any row to view standalone details.
-        </p>
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <div className="font-semibold" style={{ fontSize: "0.9375rem" }}>Projects Log</div>
+          <div className="text-sub" style={{ fontSize: "0.8125rem" }}>
+            Viewing submitted ideas across your locations
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex gap-2 flex-wrap" style={{ flex: 1 }}>
-          <input
-            type="search"
-            placeholder="Search by ref number or staff ID…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ maxWidth: "18rem" }}
-          />
+      <div className="flex justify-between items-center gap-3 flex-wrap">
+        <input
+          type="search"
+          placeholder="Search by ref number, submitter name or staff ID…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{ maxWidth: "24rem" }}
+        />
+        <div className="flex gap-2">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
@@ -91,9 +91,7 @@ export default function GMProjectsClient({
           </select>
           <select
             value={deptFilter}
-            onChange={(e) =>
-              setDeptFilter(e.target.value === "all" ? "all" : Number(e.target.value))
-            }
+            onChange={(e) => setDeptFilter(e.target.value)}
             style={{ width: "auto" }}
           >
             <option value="all">All departments</option>

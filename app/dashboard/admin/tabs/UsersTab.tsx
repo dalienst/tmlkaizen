@@ -13,8 +13,8 @@ interface UsersTabProps {
   users: User[];
   locations: Location[];
   departments: Department[];
-  hrLocationsMapped: { hrUserId: number; locationId: number }[];
-  gmLocationsMapped: { gmUserId: number; locationId: number }[];
+  hrLocationsMapped: { hrUserId: string; locationId: string }[];
+  gmLocationsMapped: { gmUserId: string; locationId: string }[];
 }
 
 export default function UsersTab({
@@ -26,36 +26,36 @@ export default function UsersTab({
 }: UsersTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("HR");
-  const [selectedHRLocations, setSelectedHRLocations] = useState<number[]>([]);
-  const [selectedGMLocations, setSelectedGMLocations] = useState<number[]>([]);
+  const [selectedHRLocations, setSelectedHRLocations] = useState<string[]>([]);
+  const [selectedGMLocations, setSelectedGMLocations] = useState<string[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [editRole, setEditRole] = useState<string>("HR");
-  const [editHRLocations, setEditHRLocations] = useState<number[]>([]);
-  const [editGMLocations, setEditGMLocations] = useState<number[]>([]);
+  const [editHRLocations, setEditHRLocations] = useState<string[]>([]);
+  const [editGMLocations, setEditGMLocations] = useState<string[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
 
-  const [resendingId, setResendingId] = useState<number | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   // ── HR / GM Locations Checklist Toggles ─────────────────────────────────────
-  function toggleHRLocation(id: number) {
+  function toggleHRLocation(id: string) {
     setSelectedHRLocations((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
     );
   }
-  function toggleGMLocation(id: number) {
+  function toggleGMLocation(id: string) {
     setSelectedGMLocations((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
     );
   }
-  function toggleEditHRLocation(id: number) {
+  function toggleEditHRLocation(id: string) {
     setEditHRLocations((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
     );
   }
-  function toggleEditGMLocation(id: number) {
+  function toggleEditGMLocation(id: string) {
     setEditGMLocations((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
     );
@@ -112,7 +112,7 @@ export default function UsersTab({
     });
   }
 
-  function handleResend(userId: number) {
+  function handleResend(userId: string) {
     setResendingId(userId);
     startTransition(async () => {
       const res = await resendCredentials(userId);

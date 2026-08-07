@@ -11,7 +11,7 @@ interface BulkRow {
   staffId: string;
   name: string;
   email: string;
-  departmentId: string;
+  departmentCode: string;
 }
 
 interface HRDashboardClientProps {
@@ -26,7 +26,7 @@ export default function HRDashboardClient({
   locations,
 }: HRDashboardClientProps) {
   const [search, setSearch] = useState("");
-  const [filterDeptId, setFilterDeptId] = useState<number | "all">("all");
+  const [filterDeptId, setFilterDeptId] = useState<string | "all">("all");
   const [isAddOpen, setAddOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Staff | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Staff | null>(null);
@@ -38,15 +38,15 @@ export default function HRDashboardClient({
 
   const [isBulkOpen, setBulkOpen] = useState(false);
   const [bulkRows, setBulkRows] = useState<BulkRow[]>([
-    { staffId: "", name: "", email: "", departmentId: "" },
-    { staffId: "", name: "", email: "", departmentId: "" },
-    { staffId: "", name: "", email: "", departmentId: "" },
+    { staffId: "", name: "", email: "", departmentCode: "" },
+    { staffId: "", name: "", email: "", departmentCode: "" },
+    { staffId: "", name: "", email: "", departmentCode: "" },
   ]);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   function addBulkRow() {
     if (bulkRows.length >= 50) return;
-    setBulkRows((prev) => [...prev, { staffId: "", name: "", email: "", departmentId: "" }]);
+    setBulkRows((prev) => [...prev, { staffId: "", name: "", email: "", departmentCode: "" }]);
   }
 
   function removeBulkRow(idx: number) {
@@ -64,19 +64,19 @@ export default function HRDashboardClient({
     e.preventDefault();
     setBulkError(null);
 
-    const toInsert: { staffId: string; name: string; email: string; departmentId: number }[] = [];
+    const toInsert: { staffId: string; name: string; email: string; departmentCode: string }[] = [];
     for (let i = 0; i < bulkRows.length; i++) {
       const row = bulkRows[i];
       const staffId = row.staffId.trim();
       const name = row.name.trim();
       const email = row.email.trim();
-      const departmentId = Number(row.departmentId);
+      const departmentCode = row.departmentCode.trim();
 
-      if (!staffId || !name || !email || !departmentId) {
+      if (!staffId || !name || !email || !departmentCode) {
         setBulkError(`Row ${i + 1} has incomplete details. All fields are required.`);
         return;
       }
-      toInsert.push({ staffId, name, email, departmentId });
+      toInsert.push({ staffId, name, email, departmentCode });
     }
 
     startTransition(async () => {
@@ -87,9 +87,9 @@ export default function HRDashboardClient({
       } else {
         setBulkOpen(false);
         setBulkRows([
-          { staffId: "", name: "", email: "", departmentId: "" },
-          { staffId: "", name: "", email: "", departmentId: "" },
-          { staffId: "", name: "", email: "", departmentId: "" },
+          { staffId: "", name: "", email: "", departmentCode: "" },
+          { staffId: "", name: "", email: "", departmentCode: "" },
+          { staffId: "", name: "", email: "", departmentCode: "" },
         ]);
         toast.success(`${toInsert.length} staff member(s) created successfully.`);
       }
@@ -111,7 +111,7 @@ export default function HRDashboardClient({
     return loc ? `${d.name} (${loc.name})` : d.name;
   };
 
-  const deptName = (id: number) => {
+  const deptName = (id: string) => {
     const d = departments.find((dept) => dept.id === id);
     return d ? getDeptLabel(d) : "—";
   };
@@ -157,17 +157,16 @@ export default function HRDashboardClient({
     reader.onload = async (ev) => {
       const text = ev.target?.result as string;
       const lines = text.trim().split("\n").slice(1); // skip header
-      const rows: { staffId: string; name: string; email: string; departmentId: number }[] = [];
+      const rows: { staffId: string; name: string; email: string; departmentCode: string }[] = [];
 
       for (const line of lines) {
-        const [staffId, name, email, deptIdStr] = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
-        const departmentId = Number(deptIdStr);
-        if (!staffId || !name || !email || !departmentId) continue;
-        rows.push({ staffId, name, email, departmentId });
+        const [staffId, name, email, deptCode] = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+        if (!staffId || !name || !email || !deptCode) continue;
+        rows.push({ staffId, name, email, departmentCode: deptCode });
       }
 
       if (rows.length === 0) {
-        setCsvError("No valid rows found. Expected columns: staffId, name, email, departmentId");
+        setCsvError("No valid rows found. Expected columns: staffId, name, email, departmentCode");
         toast.error("No valid rows found in CSV.");
         return;
       }
@@ -195,8 +194,11 @@ export default function HRDashboardClient({
         <div className="flex items-center justify-between gap-4">
           <div>
             <div className="font-semibold" style={{ fontSize: "0.875rem" }}>Bulk Import via CSV</div>
-            <div className="text-sub" style={{ fontSize: "0.8125rem" }}>
-              CSV format: <code style={{ fontSize: "0.75rem", background: "var(--color-muted)", padding: "1px 4px", borderRadius: "3px" }}>staffId, name, email, departmentId</code>
+            <div className="text-sub" style={{ fontSize: "0.8125rem", marginTop: "0.25rem" }}>
+              CSV format: <code style={{ fontSize: "0.75rem", background: "var(--color-muted)", padding: "1px 4px", borderRadius: "3px" }}>staffId, name, email, departmentCode</code>
+            </div>
+            <div className="text-muted" style={{ fontSize: "0.75rem", marginTop: "0.25rem" }}>
+              Note: The CSV file must include a header row. The <code>departmentCode</code> column must contain a valid, registered department code (e.g. <code>IT</code> or <code>HR</code>).
             </div>
           </div>
           <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>
@@ -226,9 +228,7 @@ export default function HRDashboardClient({
           />
           <select
             value={filterDeptId}
-            onChange={(e) =>
-              setFilterDeptId(e.target.value === "all" ? "all" : Number(e.target.value))
-            }
+            onChange={(e) => setFilterDeptId(e.target.value)}
             style={{ width: "auto" }}
           >
             <option value="all">All departments</option>
@@ -335,7 +335,7 @@ export default function HRDashboardClient({
         </form>
       </Modal>
 
-      {/* Edit Modal */}
+      {/* Edit */}
       <Modal
         isOpen={!!editTarget}
         onClose={() => setEditTarget(null)}
@@ -365,6 +365,14 @@ export default function HRDashboardClient({
             <div className="field">
               <label htmlFor="edit-s-email">Email</label>
               <input id="edit-s-email" name="email" type="email" defaultValue={editTarget.email} required />
+            </div>
+            <div className="field">
+              <label htmlFor="edit-s-dept">Department</label>
+              <select id="edit-s-dept" name="departmentId" defaultValue={editTarget.departmentId} required>
+                {departments.filter((d) => d.isActive).map((d) => (
+                  <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>
+                ))}
+              </select>
             </div>
           </form>
         )}
@@ -448,14 +456,14 @@ export default function HRDashboardClient({
                   style={{ flex: 2, padding: "0.375rem 0.5rem" }}
                 />
                 <select
-                  value={row.departmentId}
-                  onChange={(e) => updateBulkRow(idx, "departmentId", e.target.value)}
+                  value={row.departmentCode}
+                  onChange={(e) => updateBulkRow(idx, "departmentCode", e.target.value)}
                   required
                   style={{ flex: 2.5, padding: "0.375rem 0.5rem" }}
                 >
                   <option value="">Select department…</option>
                   {departments.filter((d) => d.isActive).map((d) => (
-                    <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>
+                    <option key={d.id} value={d.code}>{getDeptLabel(d)} ({d.code})</option>
                   ))}
                 </select>
                 <div style={{ width: "2rem", display: "flex", justifyContent: "center" }}>

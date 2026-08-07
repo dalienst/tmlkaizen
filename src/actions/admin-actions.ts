@@ -37,14 +37,14 @@ export async function createLocation(formData: FormData) {
 
 export async function updateLocation(formData: FormData) {
   await assertAdmin();
-  const id = Number(formData.get("id"));
+  const id = formData.get("id") as string;
   const name = (formData.get("name") as string).trim();
-  if (!name) return { error: "Name is required." };
+  if (!name || !id) return { error: "ID and Name are required." };
   await db.update(locations).set({ name }).where(eq(locations.id, id));
   revalidatePath("/dashboard/admin");
 }
 
-export async function toggleLocationActive(id: number, isActive: boolean) {
+export async function toggleLocationActive(id: string, isActive: boolean) {
   await assertAdmin();
   await db.update(locations).set({ isActive }).where(eq(locations.id, id));
   revalidatePath("/dashboard/admin");
@@ -55,22 +55,56 @@ export async function toggleLocationActive(id: number, isActive: boolean) {
 export async function createDepartment(formData: FormData) {
   await assertAdmin();
   const name = (formData.get("name") as string).trim();
-  const locationId = Number(formData.get("locationId"));
+  const locationId = formData.get("locationId") as string;
+  let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+
   if (!name || !locationId) return { error: "Name and location are required." };
-  await db.insert(departments).values({ name, locationId });
+
+  if (!code) {
+    code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (code.length > 10) code = code.substring(0, 10);
+    if (!code) code = "DEPT-" + Math.floor(1000 + Math.random() * 9000);
+  }
+
+  // Verify unique department code
+  const existing = await db.query.departments.findFirst({
+    where: eq(departments.code, code),
+  });
+  if (existing) {
+    return { error: `Department code "${code}" is already in use.` };
+  }
+
+  await db.insert(departments).values({ name, code, locationId });
   revalidatePath("/dashboard/admin");
 }
 
 export async function updateDepartment(formData: FormData) {
   await assertAdmin();
-  const id = Number(formData.get("id"));
+  const id = formData.get("id") as string;
   const name = (formData.get("name") as string).trim();
-  if (!name) return { error: "Name is required." };
-  await db.update(departments).set({ name }).where(eq(departments.id, id));
+  let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+
+  if (!name || !id) return { error: "ID and Name are required." };
+
+  if (!code) {
+    code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (code.length > 10) code = code.substring(0, 10);
+    if (!code) code = "DEPT-" + Math.floor(1000 + Math.random() * 9000);
+  }
+
+  // Verify uniqueness
+  const existing = await db.query.departments.findFirst({
+    where: and(eq(departments.code, code), not(eq(departments.id, id))),
+  });
+  if (existing) {
+    return { error: `Department code "${code}" is already in use.` };
+  }
+
+  await db.update(departments).set({ name, code }).where(eq(departments.id, id));
   revalidatePath("/dashboard/admin");
 }
 
-export async function toggleDepartmentActive(id: number, isActive: boolean) {
+export async function toggleDepartmentActive(id: string, isActive: boolean) {
   await assertAdmin();
   await db.update(departments).set({ isActive }).where(eq(departments.id, id));
   revalidatePath("/dashboard/admin");
@@ -90,11 +124,11 @@ export async function createCoreValue(formData: FormData) {
 
 export async function updateCoreValue(formData: FormData) {
   await assertAdmin();
-  const id = Number(formData.get("id"));
+  const id = formData.get("id") as string;
   const name = (formData.get("name") as string).trim();
   const description = (formData.get("description") as string | null)?.trim() || null;
   const sortOrder = Number(formData.get("sortOrder") ?? 0);
-  if (!name) return { error: "Name is required." };
+  if (!name || !id) return { error: "ID and Name are required." };
   await db
     .update(coreValues)
     .set({ name, description, sortOrder })
@@ -102,7 +136,7 @@ export async function updateCoreValue(formData: FormData) {
   revalidatePath("/dashboard/admin");
 }
 
-export async function toggleCoreValueActive(id: number, isActive: boolean) {
+export async function toggleCoreValueActive(id: string, isActive: boolean) {
   await assertAdmin();
   await db.update(coreValues).set({ isActive }).where(eq(coreValues.id, id));
   revalidatePath("/dashboard/admin");
@@ -123,10 +157,10 @@ const createUserSchema = z.object({
   email: z.string().email(),
   staffId: z.string().optional().nullable(),
   role: z.enum(["HR", "GM", "DEPT_MANAGER"]),
-  locationId: z.number().nullable(),
-  departmentId: z.number().nullable(),
-  hrLocationIds: z.string().optional().nullable(), // JSON array for HR
-  gmLocationIds: z.string().optional().nullable(), // JSON array for GM
+  locationId: z.string().uuid().nullable(),
+  departmentId: z.string().uuid().nullable(),
+  hrLocationIds: z.string().optional().nullable(), // JSON array of string UUIDs
+  gmLocationIds: z.string().optional().nullable(), // JSON array of string UUIDs
 });
 
 export async function createUser(formData: FormData) {
@@ -140,8 +174,8 @@ export async function createUser(formData: FormData) {
     email: formData.get("email"),
     staffId: (formData.get("staffId") as string | null) || null,
     role: formData.get("role"),
-    locationId: locationIdVal && locationIdVal !== "" ? Number(locationIdVal) : null,
-    departmentId: departmentIdVal && departmentIdVal !== "" ? Number(departmentIdVal) : null,
+    locationId: locationIdVal && locationIdVal !== "" ? (locationIdVal as string) : null,
+    departmentId: departmentIdVal && departmentIdVal !== "" ? (departmentIdVal as string) : null,
     hrLocationIds: formData.get("hrLocationIds") as string | null,
     gmLocationIds: formData.get("gmLocationIds") as string | null,
   };
@@ -178,7 +212,7 @@ export async function createUser(formData: FormData) {
 
   // For HR, insert hr_locations join rows
   if (role === "HR" && hrLocationIds) {
-    const locIds: number[] = JSON.parse(hrLocationIds);
+    const locIds: string[] = JSON.parse(hrLocationIds);
     if (locIds.length > 0) {
       await db.insert(hrLocations).values(
         locIds.map((lid) => ({ hrUserId: newUser.id, locationId: lid }))
@@ -188,7 +222,7 @@ export async function createUser(formData: FormData) {
 
   // For GM, insert gm_locations join rows
   if (role === "GM" && gmLocationIds) {
-    const locIds: number[] = JSON.parse(gmLocationIds);
+    const locIds: string[] = JSON.parse(gmLocationIds);
     if (locIds.length > 0) {
       await db.insert(gmLocations).values(
         locIds.map((lid) => ({ gmUserId: newUser.id, locationId: lid }))
@@ -207,20 +241,20 @@ export async function createUser(formData: FormData) {
   revalidatePath("/dashboard/admin");
 }
 
-export async function toggleUserActive(id: number, isActive: boolean) {
+export async function toggleUserActive(id: string, isActive: boolean) {
   await assertAdmin();
   await db.update(users).set({ isActive }).where(eq(users.id, id));
   revalidatePath("/dashboard/admin");
 }
 
 const updateUserSchema = z.object({
-  id: z.number(),
+  id: z.string().uuid(),
   name: z.string().min(1),
   email: z.string().email(),
   staffId: z.string().optional().nullable(),
   role: z.enum(["HR", "GM", "DEPT_MANAGER"]),
-  locationId: z.number().nullable(),
-  departmentId: z.number().nullable(),
+  locationId: z.string().uuid().nullable(),
+  departmentId: z.string().uuid().nullable(),
   hrLocationIds: z.string().optional().nullable(),
   gmLocationIds: z.string().optional().nullable(),
 });
@@ -233,13 +267,13 @@ export async function updateUser(formData: FormData) {
   const departmentIdVal = formData.get("departmentId");
 
   const raw = {
-    id: idVal ? Number(idVal) : null,
+    id: idVal ? (idVal as string) : null,
     name: formData.get("name"),
     email: formData.get("email"),
     staffId: (formData.get("staffId") as string | null) || null,
     role: formData.get("role"),
-    locationId: locationIdVal && locationIdVal !== "" ? Number(locationIdVal) : null,
-    departmentId: departmentIdVal && departmentIdVal !== "" ? Number(departmentIdVal) : null,
+    locationId: locationIdVal && locationIdVal !== "" ? (locationIdVal as string) : null,
+    departmentId: departmentIdVal && departmentIdVal !== "" ? (departmentIdVal as string) : null,
     hrLocationIds: formData.get("hrLocationIds") as string | null,
     gmLocationIds: formData.get("gmLocationIds") as string | null,
   };
@@ -273,7 +307,7 @@ export async function updateUser(formData: FormData) {
   // Sync HR location mapping
   await db.delete(hrLocations).where(eq(hrLocations.hrUserId, id));
   if (role === "HR" && hrLocationIds) {
-    const locIds: number[] = JSON.parse(hrLocationIds);
+    const locIds: string[] = JSON.parse(hrLocationIds);
     if (locIds.length > 0) {
       await db.insert(hrLocations).values(
         locIds.map((lid) => ({ hrUserId: id, locationId: lid }))
@@ -284,7 +318,7 @@ export async function updateUser(formData: FormData) {
   // Sync GM location mapping
   await db.delete(gmLocations).where(eq(gmLocations.gmUserId, id));
   if (role === "GM" && gmLocationIds) {
-    const locIds: number[] = JSON.parse(gmLocationIds);
+    const locIds: string[] = JSON.parse(gmLocationIds);
     if (locIds.length > 0) {
       await db.insert(gmLocations).values(
         locIds.map((lid) => ({ gmUserId: id, locationId: lid }))
@@ -296,7 +330,7 @@ export async function updateUser(formData: FormData) {
   return { success: true };
 }
 
-export async function resendCredentials(userId: number) {
+export async function resendCredentials(userId: string) {
   await assertAdmin();
 
   const user = await db.query.users.findFirst({

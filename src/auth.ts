@@ -54,8 +54,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
         const u = user as Record<string, unknown>;
         token.role = u.role as UserRole;
-        token.locationId = u.locationId as number | null;
-        token.departmentId = u.departmentId as number | null;
+        token.locationId = u.locationId as string | null;
+        token.departmentId = u.departmentId as string | null;
       }
       return token;
     },
@@ -63,8 +63,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
-        session.user.locationId = token.locationId as number | null;
-        session.user.departmentId = token.departmentId as number | null;
+        session.user.locationId = token.locationId as string | null;
+        session.user.departmentId = token.departmentId as string | null;
       }
       return session;
     },
@@ -80,8 +80,8 @@ declare module "next-auth" {
       email?: string | null;
       image?: string | null;
       role: UserRole;
-      locationId: number | null;
-      departmentId: number | null;
+      locationId: string | null;
+      departmentId: string | null;
     };
   }
 }

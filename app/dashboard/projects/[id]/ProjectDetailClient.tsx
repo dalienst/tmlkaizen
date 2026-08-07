@@ -19,7 +19,7 @@ type ProjectWithRelations = KaizenProject & {
 
 interface ProjectDetailClientProps {
   project: ProjectWithRelations;
-  cvMap: Record<number, string>;
+  cvMap: Record<string, string>;
   canEdit: boolean;
 }
 

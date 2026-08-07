@@ -19,7 +19,7 @@ const NEXT_LABELS: Record<ProjectStatus, string> = {
 };
 
 interface Props {
-  projectId: number;
+  projectId: string;
   currentStatus: ProjectStatus;
 }
 
