@@ -48,18 +48,30 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ],
 };
 
+import { useSidebar } from "@/context/SidebarContext";
+
 export function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = session?.user?.role as UserRole | undefined;
   const navItems = role ? NAV_ITEMS[role] : [];
+  const { isOpen, close } = useSidebar();
 
   return (
-    <aside className="dashboard-sidebar">
+    <aside className={`dashboard-sidebar${isOpen ? " open" : ""}`}>
       {/* Logo */}
-      <div className="sidebar-logo">
-        <span style={{ color: "var(--color-brand)" }}>Kaizen</span>
-        <span style={{ color: "var(--color-text-sub)", fontWeight: 400 }}> Tracker</span>
+      <div className="sidebar-logo flex items-center justify-between">
+        <div>
+          <span style={{ color: "var(--color-brand)" }}>Kaizen</span>
+          <span style={{ color: "var(--color-text-sub)", fontWeight: 400 }}> Tracker</span>
+        </div>
+        <button
+          onClick={close}
+          className="mobile-close-btn"
+          aria-label="Close sidebar menu"
+        >
+          ✕
+        </button>
       </div>
 
       {/* Navigation */}
@@ -78,6 +90,7 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={`sidebar-nav-item${isActive ? " active" : ""}`}
+                onClick={close}
               >
                 <span style={{ fontSize: "0.875rem", lineHeight: 1 }} aria-hidden="true">
                   {item.icon}
