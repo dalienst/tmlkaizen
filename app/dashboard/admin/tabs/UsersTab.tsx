@@ -14,6 +14,7 @@ interface UsersTabProps {
   locations: Location[];
   departments: Department[];
   hrLocationsMapped: { hrUserId: number; locationId: number }[];
+  gmLocationsMapped: { gmUserId: number; locationId: number }[];
 }
 
 export default function UsersTab({
@@ -21,29 +22,41 @@ export default function UsersTab({
   locations,
   departments,
   hrLocationsMapped,
+  gmLocationsMapped,
 }: UsersTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("HR");
   const [selectedHRLocations, setSelectedHRLocations] = useState<number[]>([]);
+  const [selectedGMLocations, setSelectedGMLocations] = useState<number[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [editRole, setEditRole] = useState<string>("HR");
   const [editHRLocations, setEditHRLocations] = useState<number[]>([]);
+  const [editGMLocations, setEditGMLocations] = useState<number[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
 
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // ── HR Locations Checklist Toggles ──────────────────────────────────────────
+  // ── HR / GM Locations Checklist Toggles ─────────────────────────────────────
   function toggleHRLocation(id: number) {
     setSelectedHRLocations((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
     );
   }
-
+  function toggleGMLocation(id: number) {
+    setSelectedGMLocations((prev) =>
+      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
+    );
+  }
   function toggleEditHRLocation(id: number) {
     setEditHRLocations((prev) =>
+      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
+    );
+  }
+  function toggleEditGMLocation(id: number) {
+    setEditGMLocations((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
     );
   }
@@ -54,7 +67,9 @@ export default function UsersTab({
     if (selectedRole === "HR") {
       fd.set("hrLocationIds", JSON.stringify(selectedHRLocations));
     }
-    
+    if (selectedRole === "GM") {
+      fd.set("gmLocationIds", JSON.stringify(selectedGMLocations));
+    }
     startTransition(async () => {
       const result = await createUser(fd);
       if (result?.error) {
@@ -64,6 +79,7 @@ export default function UsersTab({
         setCreateOpen(false);
         setSelectedRole("HR");
         setSelectedHRLocations([]);
+        setSelectedGMLocations([]);
         toast.success("User created successfully!");
       }
     });
@@ -74,7 +90,9 @@ export default function UsersTab({
     if (editRole === "HR") {
       fd.set("hrLocationIds", JSON.stringify(editHRLocations));
     }
-
+    if (editRole === "GM") {
+      fd.set("gmLocationIds", JSON.stringify(editGMLocations));
+    }
     startTransition(async () => {
       const result = await updateUser(fd);
       if (result?.error) {
@@ -110,11 +128,14 @@ export default function UsersTab({
   function openEditModal(u: User) {
     setEditTarget(u);
     setEditRole(u.role);
-    // Find pre-selected HR locations
-    const selected = hrLocationsMapped
+    const selectedHR = hrLocationsMapped
       .filter((hl) => hl.hrUserId === u.id)
       .map((hl) => hl.locationId);
-    setEditHRLocations(selected);
+    setEditHRLocations(selectedHR);
+    const selectedGM = gmLocationsMapped
+      .filter((gl) => gl.gmUserId === u.id)
+      .map((gl) => gl.locationId);
+    setEditGMLocations(selectedGM);
     setEditError(null);
   }
 
@@ -263,15 +284,27 @@ export default function UsersTab({
             </select>
           </div>
 
+          {/* GM multi-location checkboxes */}
           {selectedRole === "GM" && (
             <div className="field">
-              <label htmlFor="user-location">Assigned location</label>
-              <select id="user-location" name="locationId" required>
-                <option value="">Select location…</option>
+              <label>Assigned locations <span className="text-muted">(select all that apply)</span></label>
+              <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
                 {locations.filter((l) => l.isActive).map((l) => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
+                  <label
+                    key={l.id}
+                    className={`checkbox-chip${selectedGMLocations.includes(l.id) ? " selected" : ""}`}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <input
+                      type="checkbox"
+                      style={{ display: "none" }}
+                      checked={selectedGMLocations.includes(l.id)}
+                      onChange={() => toggleGMLocation(l.id)}
+                    />
+                    {l.name}
+                  </label>
                 ))}
-              </select>
+              </div>
             </div>
           )}
 
@@ -383,13 +416,24 @@ export default function UsersTab({
 
             {editRole === "GM" && (
               <div className="field">
-                <label htmlFor="edit-user-location">Assigned location</label>
-                <select id="edit-user-location" name="locationId" defaultValue={editTarget.locationId ?? ""} required>
-                  <option value="">Select location…</option>
+                <label>Assigned locations <span className="text-muted">(select all that apply)</span></label>
+                <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
                   {locations.filter((l) => l.isActive).map((l) => (
-                    <option key={l.id} value={l.id}>{l.name}</option>
+                    <label
+                      key={l.id}
+                      className={`checkbox-chip${editGMLocations.includes(l.id) ? " selected" : ""}`}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        style={{ display: "none" }}
+                        checked={editGMLocations.includes(l.id)}
+                        onChange={() => toggleEditGMLocation(l.id)}
+                      />
+                      {l.name}
+                    </label>
                   ))}
-                </select>
+                </div>
               </div>
             )}
 

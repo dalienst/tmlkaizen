@@ -90,6 +90,21 @@ export const hrLocations = pgTable(
   (t) => [primaryKey({ columns: [t.hrUserId, t.locationId] })]
 );
 
+// ─── GM ↔ Locations (many-to-many) ───────────────────────────────────────────
+
+export const gmLocations = pgTable(
+  "gm_locations",
+  {
+    gmUserId: integer("gm_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    locationId: integer("location_id")
+      .notNull()
+      .references(() => locations.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.gmUserId, t.locationId] })]
+);
+
 // ─── Core Values ──────────────────────────────────────────────────────────────
 
 export const coreValues = pgTable("core_values", {
@@ -154,7 +169,7 @@ export const kaizenProjects = pgTable("kaizen_projects", {
 export const locationsRelations = relations(locations, ({ many }) => ({
   departments: many(departments),
   hrLocations: many(hrLocations),
-  gmUsers: many(users),
+  gmLocations: many(gmLocations),
 }));
 
 export const departmentsRelations = relations(departments, ({ one, many }) => ({
@@ -177,6 +192,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
     references: [departments.id],
   }),
   hrLocations: many(hrLocations),
+  gmLocations: many(gmLocations),
 }));
 
 export const hrLocationsRelations = relations(hrLocations, ({ one }) => ({
@@ -186,6 +202,17 @@ export const hrLocationsRelations = relations(hrLocations, ({ one }) => ({
   }),
   location: one(locations, {
     fields: [hrLocations.locationId],
+    references: [locations.id],
+  }),
+}));
+
+export const gmLocationsRelations = relations(gmLocations, ({ one }) => ({
+  user: one(users, {
+    fields: [gmLocations.gmUserId],
+    references: [users.id],
+  }),
+  location: one(locations, {
+    fields: [gmLocations.locationId],
     references: [locations.id],
   }),
 }));
@@ -228,6 +255,8 @@ export type NewStaff = typeof staff.$inferInsert;
 
 export type KaizenProject = typeof kaizenProjects.$inferSelect;
 export type NewKaizenProject = typeof kaizenProjects.$inferInsert;
+
+export type GmLocation = typeof gmLocations.$inferSelect;
 
 // ─── Password Reset Tokens ────────────────────────────────────────────────────
 

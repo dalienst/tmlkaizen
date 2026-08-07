@@ -15,20 +15,36 @@ interface NavItem {
 const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   SYSTEM_ADMIN: [
     { href: "/dashboard/admin", label: "Overview", icon: "⊞" },
-    { href: "/dashboard/admin/locations", label: "Locations", icon: "📍" },
-    { href: "/dashboard/admin/departments", label: "Departments", icon: "🏢" },
-    { href: "/dashboard/admin/core-values", label: "Core Values", icon: "★" },
-    { href: "/dashboard/admin/users", label: "Users", icon: "👥" },
+    { href: "/dashboard/analytics", label: "Analytics", icon: "📊" },
+    { href: "/dashboard/departments", label: "Departments", icon: "🏢" },
+    { href: "/dashboard/staff", label: "Staff", icon: "👥" },
+    { href: "/dashboard/core-values", label: "Core Values", icon: "★" },
+    { href: "/dashboard/projects", label: "All Projects", icon: "📋" },
+    { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
   ],
   HR: [
     { href: "/dashboard/hr", label: "Staff Roster", icon: "👤" },
+    { href: "/dashboard/analytics", label: "Analytics", icon: "📊" },
+    { href: "/dashboard/departments", label: "Departments", icon: "🏢" },
+    { href: "/dashboard/staff", label: "All Staff", icon: "👥" },
+    { href: "/dashboard/core-values", label: "Core Values", icon: "★" },
+    { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
   ],
   GM: [
     { href: "/dashboard/gm", label: "Overview", icon: "⊞" },
+    { href: "/dashboard/analytics", label: "Analytics", icon: "📊" },
+    { href: "/dashboard/departments", label: "Departments", icon: "🏢" },
+    { href: "/dashboard/staff", label: "Staff", icon: "👥" },
+    { href: "/dashboard/core-values", label: "Core Values", icon: "★" },
     { href: "/dashboard/gm/projects", label: "All Projects", icon: "📋" },
+    { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
   ],
   DEPT_MANAGER: [
     { href: "/dashboard/manager", label: "Projects", icon: "📋" },
+    { href: "/dashboard/analytics", label: "Analytics", icon: "📊" },
+    { href: "/dashboard/staff", label: "Department Staff", icon: "👥" },
+    { href: "/dashboard/core-values", label: "Core Values", icon: "★" },
+    { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
   ],
 };
 
@@ -51,27 +67,26 @@ export function Sidebar() {
         {role && (
           <div className="sidebar-section-label">{ROLE_LABELS[role]}</div>
         )}
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href ||
-            (item.href !== "/dashboard/admin" &&
-              item.href !== "/dashboard/hr" &&
-              item.href !== "/dashboard/gm" &&
-              item.href !== "/dashboard/manager" &&
-              pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`sidebar-nav-item${isActive ? " active" : ""}`}
-            >
-              <span style={{ fontSize: "0.875rem", lineHeight: 1 }} aria-hidden="true">
-                {item.icon}
-              </span>
-              {item.label}
-            </Link>
-          );
-        })}
+        {(() => {
+          const rootOnlyLinks = new Set(["/dashboard/admin", "/dashboard/hr", "/dashboard/gm", "/dashboard/manager"]);
+          return navItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (!rootOnlyLinks.has(item.href) && pathname.startsWith(item.href + "/"));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`sidebar-nav-item${isActive ? " active" : ""}`}
+              >
+                <span style={{ fontSize: "0.875rem", lineHeight: 1 }} aria-hidden="true">
+                  {item.icon}
+                </span>
+                {item.label}
+              </Link>
+            );
+          });
+        })()}
       </nav>
 
       {/* Footer: user info + sign out */}

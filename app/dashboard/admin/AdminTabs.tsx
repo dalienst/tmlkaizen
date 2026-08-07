@@ -27,6 +27,7 @@ interface AdminTabsProps {
   users: User[];
   coreValues: CoreValue[];
   hrLocationsMapped: { hrUserId: number; locationId: number }[];
+  gmLocationsMapped: { gmUserId: number; locationId: number }[];
 }
 
 export default function AdminTabs({
@@ -35,6 +36,7 @@ export default function AdminTabs({
   users,
   coreValues,
   hrLocationsMapped,
+  gmLocationsMapped,
 }: AdminTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>("locations");
 
@@ -67,6 +69,7 @@ export default function AdminTabs({
           locations={locations}
           departments={departments}
           hrLocationsMapped={hrLocationsMapped}
+          gmLocationsMapped={gmLocationsMapped}
         />
       )}
     </div>

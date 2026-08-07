@@ -1,11 +1,12 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { departments, users, staff, kaizenProjects, hrLocations } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { departments, users, staff, kaizenProjects, hrLocations, gmLocations } from "@/db/schema";
+import { eq, desc, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/constants";
+import ProjectStatusForm from "@/components/ui/ProjectStatusForm";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -36,7 +37,9 @@ export default async function DepartmentDetailPage({ params }: PageProps) {
   if (user.role === "SYSTEM_ADMIN") {
     allowed = true;
   } else if (user.role === "GM") {
-    allowed = !user.locationId || user.locationId === dept.locationId;
+    // Check against gm_locations (multi-location support)
+    const gmLocs = await db.select({ locationId: gmLocations.locationId }).from(gmLocations).where(eq(gmLocations.gmUserId, Number(user.id)));
+    allowed = gmLocs.some((gl) => gl.locationId === dept.locationId);
   } else if (user.role === "DEPT_MANAGER") {
     allowed = user.departmentId === id;
   } else if (user.role === "HR") {
@@ -79,8 +82,8 @@ export default async function DepartmentDetailPage({ params }: PageProps) {
   return (
     <div style={{ maxWidth: "64rem", margin: "0 auto", padding: "1.5rem 1rem" }}>
       <div style={{ marginBottom: "1.5rem" }}>
-        <Link href="/dashboard" className="text-link" style={{ fontSize: "0.875rem", textDecoration: "none" }}>
-          ← Back to Dashboard
+        <Link href="/dashboard/departments" className="text-link" style={{ fontSize: "0.875rem", textDecoration: "none" }}>
+          ← Departments
         </Link>
       </div>
 
