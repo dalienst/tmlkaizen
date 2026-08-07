@@ -71,6 +71,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
           <thead>
             <tr>
               <th>Name</th>
+              <th>Code</th>
               <th>Status</th>
               <th>Created</th>
               <th style={{ width: "8rem" }}>Actions</th>
@@ -79,7 +80,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
           <tbody>
             {locations.length === 0 && (
               <tr>
-                <td colSpan={4} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>
+                <td colSpan={5} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>
                   No locations yet. Add one to get started.
                 </td>
               </tr>
@@ -91,6 +92,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
                 style={{ cursor: "pointer" }}
               >
                 <td className="font-medium">{loc.name}</td>
+                <td><code style={{ fontSize: "0.8125rem" }}>{loc.code}</code></td>
                 <td>
                   <span
                     className={`badge ${loc.isActive ? "badge-completed" : "badge-neutral"}`}
@@ -151,10 +153,15 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
         <form
           id="create-location-form"
           action={handleCreate}
+          style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
         >
           <div className="field">
             <label htmlFor="loc-name">Location name</label>
             <input id="loc-name" name="name" type="text" placeholder="e.g. Nairobi Branch" required />
+          </div>
+          <div className="field">
+            <label htmlFor="loc-code">Location code <span className="text-muted">(optional, e.g. NRB)</span></label>
+            <input id="loc-code" name="code" type="text" placeholder="Auto-generated if left blank" style={{ textTransform: "uppercase" }} />
           </div>
         </form>
       </Modal>
@@ -185,6 +192,7 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
           <form
             id="edit-location-form"
             action={handleEdit}
+            style={{ display: "flex", flexDirection: "column", gap: "1rem" }}
           >
             <input type="hidden" name="id" value={editTarget.id} />
             <div className="field">
@@ -195,6 +203,17 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
                 type="text"
                 defaultValue={editTarget.name}
                 required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="loc-edit-code">Location code</label>
+              <input
+                id="loc-edit-code"
+                name="code"
+                type="text"
+                defaultValue={editTarget.code}
+                required
+                style={{ textTransform: "uppercase" }}
               />
             </div>
           </form>

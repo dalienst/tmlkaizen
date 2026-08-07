@@ -32,11 +32,12 @@ export const projectStatusEnum = pgEnum("project_status", [
 export const locations = pgTable("locations", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 100 }).notNull(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+}, (t) => [uniqueIndex("location_code_unique").on(t.code)]);
 
 // ─── Departments ──────────────────────────────────────────────────────────────
 

@@ -30,8 +30,25 @@ async function assertAdmin() {
 export async function createLocation(formData: FormData) {
   await assertAdmin();
   const name = (formData.get("name") as string).trim();
+  let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+
   if (!name) return { error: "Name is required." };
-  await db.insert(locations).values({ name });
+
+  if (!code) {
+    code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (code.length > 10) code = code.substring(0, 10);
+    if (!code) code = "LOC-" + Math.floor(1000 + Math.random() * 9000);
+  }
+
+  // Verify unique location code
+  const existing = await db.query.locations.findFirst({
+    where: eq(locations.code, code),
+  });
+  if (existing) {
+    return { error: `Location code "${code}" is already in use.` };
+  }
+
+  await db.insert(locations).values({ name, code });
   revalidatePath("/dashboard/admin");
 }
 
@@ -39,8 +56,25 @@ export async function updateLocation(formData: FormData) {
   await assertAdmin();
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string).trim();
+  let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+
   if (!name || !id) return { error: "ID and Name are required." };
-  await db.update(locations).set({ name }).where(eq(locations.id, id));
+
+  if (!code) {
+    code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (code.length > 10) code = code.substring(0, 10);
+    if (!code) code = "LOC-" + Math.floor(1000 + Math.random() * 9000);
+  }
+
+  // Verify uniqueness
+  const existing = await db.query.locations.findFirst({
+    where: and(eq(locations.code, code), not(eq(locations.id, id))),
+  });
+  if (existing) {
+    return { error: `Location code "${code}" is already in use.` };
+  }
+
+  await db.update(locations).set({ name, code }).where(eq(locations.id, id));
   revalidatePath("/dashboard/admin");
 }
 
