@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { locations, departments, users, coreValues, hrLocations } from "@/db/schema";
+import { locations, departments, users, coreValues, hrLocations, gmLocations } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
 import AdminTabs from "./AdminTabs";
 
@@ -13,13 +13,14 @@ export default async function AdminPage() {
   const session = await auth();
   if (session?.user?.role !== "SYSTEM_ADMIN") redirect("/dashboard");
 
-  const [allLocations, allDepartments, allUsers, allCoreValues, allHRLocationsMapped] =
+  const [allLocations, allDepartments, allUsers, allCoreValues, allHRLocationsMapped, allGMLocationsMapped] =
     await Promise.all([
       db.select().from(locations).orderBy(asc(locations.name)),
       db.select().from(departments).orderBy(asc(departments.name)),
       db.select().from(users).orderBy(desc(users.createdAt)),
       db.select().from(coreValues).orderBy(asc(coreValues.sortOrder)),
       db.select().from(hrLocations),
+      db.select().from(gmLocations),
     ]);
 
   return (
@@ -36,6 +37,7 @@ export default async function AdminPage() {
           users={allUsers}
           coreValues={allCoreValues}
           hrLocationsMapped={allHRLocationsMapped}
+          gmLocationsMapped={allGMLocationsMapped}
         />
       </div>
     </div>

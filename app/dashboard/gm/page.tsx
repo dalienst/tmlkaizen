@@ -1,23 +1,38 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { kaizenProjects, departments, staff, coreValues } from "@/db/schema";
+import { kaizenProjects, departments, staff, coreValues, locations, gmLocations } from "@/db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import { StatusBadge } from "@/components/ui/Badge";
 import { StatCard } from "@/components/ui/StatCard";
 import { Badge } from "@/components/ui/Badge";
 import { formatDate } from "@/lib/constants";
+import Link from "next/link";
 
 export const metadata = { title: "GM Dashboard | Kaizen Tracker" };
 
-export default async function GMPage() {
+export default async function GMPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ loc?: string }>;
+}) {
   const session = await auth();
   if (!session || (session.user.role !== "GM" && session.user.role !== "SYSTEM_ADMIN")) {
     redirect("/dashboard");
   }
 
-  const locationId = session.user.locationId;
-  if (!locationId) {
+  const userId = Number(session.user.id);
+  const { loc } = await searchParams;
+
+  // Load all GM locations
+  const gmLocs = await db
+    .select({ locationId: gmLocations.locationId })
+    .from(gmLocations)
+    .where(eq(gmLocations.gmUserId, userId));
+
+  const gmLocationIds = gmLocs.map((l) => l.locationId);
+
+  if (gmLocationIds.length === 0) {
     return (
       <div className="dashboard-main">
         <div className="dashboard-header">
@@ -25,18 +40,28 @@ export default async function GMPage() {
         </div>
         <div className="dashboard-content">
           <div className="alert alert-warning">
-            Your account is not assigned to a location. Please contact your system administrator.
+            Your account is not assigned to any location. Please contact your system administrator.
           </div>
         </div>
       </div>
     );
   }
 
-  // Get departments for this location
+  // Load location details
+  const allLocations = await db
+    .select()
+    .from(locations)
+    .where(inArray(locations.id, gmLocationIds));
+
+  // Selected location (default to first)
+  const selectedLocId = loc && gmLocationIds.includes(Number(loc)) ? Number(loc) : gmLocationIds[0];
+  const selectedLoc = allLocations.find((l) => l.id === selectedLocId);
+
+  // Get departments for selected location
   const locationDepts = await db
     .select()
     .from(departments)
-    .where(eq(departments.locationId, locationId));
+    .where(eq(departments.locationId, selectedLocId));
 
   const deptIds = locationDepts.map((d) => d.id);
 
@@ -60,7 +85,6 @@ export default async function GMPage() {
 
   const cvMap = Object.fromEntries(allCoreValues.map((cv) => [cv.id, cv.name]));
 
-  // Stats
   const totalCount = projects.length;
   const proposedCount = projects.filter((p) => p.project.status === "PROPOSED").length;
   const inProgressCount = projects.filter((p) => p.project.status === "IN_PROGRESS").length;
@@ -68,10 +92,10 @@ export default async function GMPage() {
   const completionRate =
     totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
-  // Per-department breakdown
   const deptBreakdown = locationDepts.map((d) => {
     const deptProjects = projects.filter((p) => p.project.departmentId === d.id);
     return {
+      id: d.id,
       name: d.name,
       total: deptProjects.length,
       proposed: deptProjects.filter((p) => p.project.status === "PROPOSED").length,
@@ -83,7 +107,26 @@ export default async function GMPage() {
   return (
     <div className="dashboard-main">
       <div className="dashboard-header">
-        <h1 className="font-semibold" style={{ fontSize: "1rem" }}>Location Overview</h1>
+        <div>
+          <h1 className="font-semibold" style={{ fontSize: "1rem" }}>Location Overview</h1>
+          {selectedLoc && (
+            <div className="text-sub" style={{ fontSize: "0.8125rem" }}>{selectedLoc.name}</div>
+          )}
+        </div>
+        {/* Location switcher — only shown if GM manages multiple locations */}
+        {allLocations.length > 1 && (
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {allLocations.map((l) => (
+              <Link
+                key={l.id}
+                href={`/dashboard/gm?loc=${l.id}`}
+                className={`btn btn-sm ${selectedLocId === l.id ? "btn-primary" : "btn-secondary"}`}
+              >
+                {l.name}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
       <div className="dashboard-content">
 
@@ -93,6 +136,25 @@ export default async function GMPage() {
           <StatCard label="Open (Proposed + In Progress)" value={proposedCount + inProgressCount} accentColor="var(--color-inprogress)" />
           <StatCard label="Completed" value={completedCount} accentColor="var(--color-completed)" />
           <StatCard label="Completion rate" value={`${completionRate}%`} accentColor={completionRate >= 50 ? "var(--color-completed)" : "var(--color-inprogress)"} />
+        </div>
+
+        {/* Quick nav cards */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {[
+            { href: "/dashboard/departments", label: "Departments", desc: `${locationDepts.length} in this location`, icon: "🏢" },
+            { href: "/dashboard/staff", label: "Staff", desc: "View all staff members", icon: "👥" },
+            { href: "/dashboard/analytics", label: "Analytics", desc: "Stall detection & stats", icon: "📊" },
+          ].map((card) => (
+            <Link key={card.href} href={card.href} style={{ textDecoration: "none" }}>
+              <div className="card" style={{ padding: "1.25rem", display: "flex", alignItems: "flex-start", gap: "0.75rem", cursor: "pointer" }}>
+                <span style={{ fontSize: "1.25rem" }}>{card.icon}</span>
+                <div>
+                  <div className="font-semibold" style={{ fontSize: "0.875rem" }}>{card.label}</div>
+                  <div className="text-muted" style={{ fontSize: "0.75rem" }}>{card.desc}</div>
+                </div>
+              </div>
+            </Link>
+          ))}
         </div>
 
         {/* Department breakdown */}
@@ -105,7 +167,13 @@ export default async function GMPage() {
               {deptBreakdown.map((dept) => (
                 <div key={dept.name}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-medium" style={{ fontSize: "0.875rem" }}>{dept.name}</span>
+                    <Link
+                      href={`/dashboard/departments/${dept.id}`}
+                      className="font-medium"
+                      style={{ fontSize: "0.875rem", textDecoration: "none", color: "var(--color-brand)" }}
+                    >
+                      {dept.name}
+                    </Link>
                     <span className="text-sub" style={{ fontSize: "0.8125rem" }}>{dept.total} total</span>
                   </div>
                   <div style={{ display: "flex", height: "0.5rem", borderRadius: "var(--radius)", overflow: "hidden", background: "var(--color-muted)" }}>
@@ -130,8 +198,9 @@ export default async function GMPage() {
 
         {/* Project table */}
         <div className="card overflow-hidden">
-          <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--color-border)" }}>
-            <span className="font-semibold" style={{ fontSize: "0.9375rem" }}>All Projects</span>
+          <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--color-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span className="font-semibold" style={{ fontSize: "0.9375rem" }}>Recent Projects</span>
+            <Link href="/dashboard/gm/projects" className="btn btn-ghost btn-sm">View all →</Link>
           </div>
           <table>
             <thead>
@@ -142,17 +211,18 @@ export default async function GMPage() {
                 <th>Core values</th>
                 <th>Date</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {projects.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>
+                  <td colSpan={7} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>
                     No submissions yet across this location.
                   </td>
                 </tr>
               )}
-              {projects.map(({ project: p, staffName, staffId, deptName }) => (
+              {projects.slice(0, 20).map(({ project: p, staffName, staffId, deptName }) => (
                 <tr key={p.id}>
                   <td>
                     <code style={{ fontSize: "0.8125rem", fontWeight: 600, color: "var(--color-brand)" }}>
@@ -178,6 +248,9 @@ export default async function GMPage() {
                     {formatDate(p.createdAt)}
                   </td>
                   <td><StatusBadge status={p.status} /></td>
+                  <td>
+                    <Link href={`/dashboard/projects/${p.id}`} className="btn btn-ghost btn-sm">View</Link>
+                  </td>
                 </tr>
               ))}
             </tbody>

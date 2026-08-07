@@ -1,0 +1,156 @@
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { db } from "@/db";
+import {
+  staff,
+  departments,
+  locations,
+  gmLocations,
+  hrLocations,
+  kaizenProjects,
+} from "@/db/schema";
+import { eq, inArray, count } from "drizzle-orm";
+import Link from "next/link";
+import { formatDate } from "@/lib/constants";
+
+export const metadata = { title: "Staff | Kaizen Tracker" };
+
+export default async function StaffPage() {
+  const session = await auth();
+  if (!session) redirect("/login");
+
+  const role = session.user.role;
+  const userId = Number(session.user.id);
+
+  // Determine which department IDs this user can see
+  let allowedDeptIds: number[] | null = null; // null = all
+
+  if (role === "DEPT_MANAGER") {
+    const deptId = session.user.departmentId;
+    if (!deptId) {
+      return (
+        <div className="dashboard-main">
+          <div className="dashboard-header"><h1 className="font-semibold" style={{ fontSize: "1rem" }}>Department Staff</h1></div>
+          <div className="dashboard-content">
+            <div className="alert alert-warning">You are not assigned to a department.</div>
+          </div>
+        </div>
+      );
+    }
+    allowedDeptIds = [deptId];
+  } else if (role === "GM") {
+    const gmLocs = await db.select({ locationId: gmLocations.locationId }).from(gmLocations).where(eq(gmLocations.gmUserId, userId));
+    const locationIds = gmLocs.map((l) => l.locationId);
+    if (locationIds.length === 0) {
+      return (
+        <div className="dashboard-main">
+          <div className="dashboard-header"><h1 className="font-semibold" style={{ fontSize: "1rem" }}>Staff</h1></div>
+          <div className="dashboard-content">
+            <div className="alert alert-warning">Your account is not assigned to any location.</div>
+          </div>
+        </div>
+      );
+    }
+    const depts = await db.select({ id: departments.id }).from(departments).where(inArray(departments.locationId, locationIds));
+    allowedDeptIds = depts.map((d) => d.id);
+  } else if (role === "HR") {
+    const hrLocs = await db.select({ locationId: hrLocations.locationId }).from(hrLocations).where(eq(hrLocations.hrUserId, userId));
+    const locationIds = hrLocs.map((l) => l.locationId);
+    if (locationIds.length === 0) {
+      return (
+        <div className="dashboard-main">
+          <div className="dashboard-header"><h1 className="font-semibold" style={{ fontSize: "1rem" }}>Staff</h1></div>
+          <div className="dashboard-content">
+            <div className="alert alert-warning">Your account is not assigned to any location.</div>
+          </div>
+        </div>
+      );
+    }
+    const depts = await db.select({ id: departments.id }).from(departments).where(inArray(departments.locationId, locationIds));
+    allowedDeptIds = depts.map((d) => d.id);
+  }
+  // SYSTEM_ADMIN: allowedDeptIds stays null = show all
+
+  const allDepts = await db.select().from(departments);
+  const allLocations = await db.select().from(locations);
+  const deptMap = Object.fromEntries(allDepts.map((d) => [d.id, d]));
+  const locMap = Object.fromEntries(allLocations.map((l) => [l.id, l]));
+
+  // Load staff, filtered by department scope
+  const staffQuery = allowedDeptIds !== null && allowedDeptIds.length > 0
+    ? await db.select().from(staff).where(inArray(staff.departmentId, allowedDeptIds))
+    : allowedDeptIds === null
+      ? await db.select().from(staff)
+      : [];
+
+  // Count projects per staff member
+  const projectCounts = staffQuery.length > 0
+    ? await db
+        .select({ staffId: kaizenProjects.staffId, count: count() })
+        .from(kaizenProjects)
+        .where(inArray(kaizenProjects.staffId, staffQuery.map((s) => s.id)))
+        .groupBy(kaizenProjects.staffId)
+    : [];
+  const countMap = Object.fromEntries(projectCounts.map((r) => [r.staffId, Number(r.count)]));
+
+  const title = role === "DEPT_MANAGER" ? "Department Staff" : "Staff";
+
+  return (
+    <div className="dashboard-main">
+      <div className="dashboard-header">
+        <h1 className="font-semibold" style={{ fontSize: "1rem" }}>{title}</h1>
+        <div className="text-sub" style={{ fontSize: "0.8125rem" }}>
+          {staffQuery.length} member{staffQuery.length !== 1 ? "s" : ""}
+        </div>
+      </div>
+      <div className="dashboard-content">
+        {staffQuery.length === 0 ? (
+          <div className="card" style={{ padding: "2rem", textAlign: "center", color: "var(--color-text-muted)" }}>
+            No staff members found.
+          </div>
+        ) : (
+          <div className="card overflow-hidden">
+            <table>
+              <thead>
+                <tr>
+                  <th>Staff ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Department</th>
+                  <th>Location</th>
+                  <th>Submissions</th>
+                  <th>Joined</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {staffQuery.map((s) => {
+                  const dept = deptMap[s.departmentId];
+                  const loc = dept ? locMap[dept.locationId] : null;
+                  return (
+                    <tr key={s.id}>
+                      <td><code style={{ fontSize: "0.8125rem" }}>{s.staffId}</code></td>
+                      <td className="font-medium">{s.name}</td>
+                      <td className="text-sub">{s.email}</td>
+                      <td className="text-sub">{dept?.name ?? "—"}</td>
+                      <td className="text-sub">{loc?.name ?? "—"}</td>
+                      <td>
+                        <span className="badge badge-brand">{countMap[s.id] ?? 0}</span>
+                      </td>
+                      <td className="text-sub">{formatDate(s.createdAt)}</td>
+                      <td>
+                        <Link href={`/dashboard/staff/${s.id}`} className="btn btn-ghost btn-sm">
+                          View
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -6,6 +6,7 @@ import {
   departments,
   users,
   hrLocations,
+  gmLocations,
   coreValues,
 } from "@/db/schema";
 import { eq, and, not } from "drizzle-orm";
@@ -124,7 +125,8 @@ const createUserSchema = z.object({
   role: z.enum(["HR", "GM", "DEPT_MANAGER"]),
   locationId: z.number().nullable(),
   departmentId: z.number().nullable(),
-  hrLocationIds: z.string().optional().nullable(), // JSON array of location IDs for HR
+  hrLocationIds: z.string().optional().nullable(), // JSON array for HR
+  gmLocationIds: z.string().optional().nullable(), // JSON array for GM
 });
 
 export async function createUser(formData: FormData) {
@@ -141,6 +143,7 @@ export async function createUser(formData: FormData) {
     locationId: locationIdVal && locationIdVal !== "" ? Number(locationIdVal) : null,
     departmentId: departmentIdVal && departmentIdVal !== "" ? Number(departmentIdVal) : null,
     hrLocationIds: formData.get("hrLocationIds") as string | null,
+    gmLocationIds: formData.get("gmLocationIds") as string | null,
   };
 
   const parsed = createUserSchema.safeParse(raw);
@@ -148,7 +151,7 @@ export async function createUser(formData: FormData) {
     return { error: "Please fill in all required fields correctly." };
   }
 
-  const { name, email, staffId, role, locationId, departmentId, hrLocationIds } =
+  const { name, email, staffId, role, locationId, departmentId, hrLocationIds, gmLocationIds } =
     parsed.data;
 
   // Check for existing email
@@ -183,6 +186,16 @@ export async function createUser(formData: FormData) {
     }
   }
 
+  // For GM, insert gm_locations join rows
+  if (role === "GM" && gmLocationIds) {
+    const locIds: number[] = JSON.parse(gmLocationIds);
+    if (locIds.length > 0) {
+      await db.insert(gmLocations).values(
+        locIds.map((lid) => ({ gmUserId: newUser.id, locationId: lid }))
+      );
+    }
+  }
+
   // Send welcome email
   try {
     await sendWelcomeEmail({ to: email, name, email, temporaryPassword });
@@ -209,6 +222,7 @@ const updateUserSchema = z.object({
   locationId: z.number().nullable(),
   departmentId: z.number().nullable(),
   hrLocationIds: z.string().optional().nullable(),
+  gmLocationIds: z.string().optional().nullable(),
 });
 
 export async function updateUser(formData: FormData) {
@@ -227,6 +241,7 @@ export async function updateUser(formData: FormData) {
     locationId: locationIdVal && locationIdVal !== "" ? Number(locationIdVal) : null,
     departmentId: departmentIdVal && departmentIdVal !== "" ? Number(departmentIdVal) : null,
     hrLocationIds: formData.get("hrLocationIds") as string | null,
+    gmLocationIds: formData.get("gmLocationIds") as string | null,
   };
 
   const parsed = updateUserSchema.safeParse(raw);
@@ -234,7 +249,7 @@ export async function updateUser(formData: FormData) {
     return { error: "Please fill in all required fields correctly." };
   }
 
-  const { id, name, email, staffId, role, locationId, departmentId, hrLocationIds } =
+  const { id, name, email, staffId, role, locationId, departmentId, hrLocationIds, gmLocationIds } =
     parsed.data;
 
   // Check if email already used by someone else
@@ -262,6 +277,17 @@ export async function updateUser(formData: FormData) {
     if (locIds.length > 0) {
       await db.insert(hrLocations).values(
         locIds.map((lid) => ({ hrUserId: id, locationId: lid }))
+      );
+    }
+  }
+
+  // Sync GM location mapping
+  await db.delete(gmLocations).where(eq(gmLocations.gmUserId, id));
+  if (role === "GM" && gmLocationIds) {
+    const locIds: number[] = JSON.parse(gmLocationIds);
+    if (locIds.length > 0) {
+      await db.insert(gmLocations).values(
+        locIds.map((lid) => ({ gmUserId: id, locationId: lid }))
       );
     }
   }

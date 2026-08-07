@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { staff, departments, hrLocations, locations } from "@/db/schema";
 import { eq, inArray, asc } from "drizzle-orm";
 import HRDashboardClient from "./HRDashboardClient";
+import Link from "next/link";
 
 export const metadata = { title: "HR Dashboard | Kaizen Tracker" };
 
@@ -66,6 +67,25 @@ export default async function HRPage() {
         </h1>
       </div>
       <div className="dashboard-content">
+        {/* Quick nav cards */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          {[
+            { href: "/dashboard/departments", label: "Departments", desc: `${allDepartments.length} in your locations`, icon: "🏢" },
+            { href: "/dashboard/analytics", label: "Analytics", desc: "Progress & stall detection", icon: "📊" },
+            { href: "/dashboard/core-values", label: "Core Values", desc: "View value-linked ideas", icon: "★" },
+          ].map((card) => (
+            <Link key={card.href} href={card.href} style={{ textDecoration: "none" }}>
+              <div className="card" style={{ padding: "1.25rem", display: "flex", alignItems: "flex-start", gap: "0.75rem", cursor: "pointer" }}>
+                <span style={{ fontSize: "1.25rem" }}>{card.icon}</span>
+                <div>
+                  <div className="font-semibold" style={{ fontSize: "0.875rem" }}>{card.label}</div>
+                  <div className="text-muted" style={{ fontSize: "0.75rem" }}>{card.desc}</div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+
         <HRDashboardClient
           staff={allStaff}
           departments={allDepartments}
