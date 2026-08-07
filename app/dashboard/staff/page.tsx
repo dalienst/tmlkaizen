@@ -12,6 +12,7 @@ import {
 import { eq, inArray, count } from "drizzle-orm";
 import Link from "next/link";
 import { formatDate } from "@/lib/constants";
+import HRDashboardClient from "../hr/HRDashboardClient";
 
 export const metadata = { title: "Staff | Kaizen Tracker" };
 
@@ -92,6 +93,28 @@ export default async function StaffPage() {
         .groupBy(kaizenProjects.staffId)
     : [];
   const countMap = Object.fromEntries(projectCounts.map((r) => [r.staffId, Number(r.count)]));
+
+  if (role === "SYSTEM_ADMIN") {
+    return (
+      <div className="dashboard-main">
+        <div className="dashboard-header">
+          <div>
+            <div className="font-semibold" style={{ fontSize: "1rem" }}>Staff Directory</div>
+            <div className="text-sub" style={{ fontSize: "0.8125rem" }}>
+              {staffQuery.length} member{staffQuery.length !== 1 ? "s" : ""}
+            </div>
+          </div>
+        </div>
+        <div className="dashboard-content">
+          <HRDashboardClient
+            staff={staffQuery}
+            departments={allDepts}
+            locations={allLocations}
+          />
+        </div>
+      </div>
+    );
+  }
 
   const title = role === "DEPT_MANAGER" ? "Department Staff" : "Staff";
 

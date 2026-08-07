@@ -41,6 +41,7 @@ export async function addStaffMember(formData: FormData) {
 
   await db.insert(staff).values({ staffId, name, email, departmentId });
   revalidatePath("/dashboard/hr");
+  revalidatePath("/dashboard/staff");
 }
 
 export async function updateStaffMember(formData: FormData) {
@@ -52,12 +53,14 @@ export async function updateStaffMember(formData: FormData) {
   if (!name || !email || !id || !departmentId) return { error: "All fields are required." };
   await db.update(staff).set({ name, email, departmentId }).where(eq(staff.id, id));
   revalidatePath("/dashboard/hr");
+  revalidatePath("/dashboard/staff");
 }
 
 export async function removeStaffMember(id: string) {
   await assertHR();
   await db.update(staff).set({ isActive: false }).where(eq(staff.id, id));
   revalidatePath("/dashboard/hr");
+  revalidatePath("/dashboard/staff");
 }
 
 /** Bulk import staff from parsed CSV rows */
@@ -96,5 +99,6 @@ export async function bulkImportStaff(
     .onConflictDoNothing({ target: staff.staffId });
 
   revalidatePath("/dashboard/hr");
+  revalidatePath("/dashboard/staff");
   return { imported: toInsert.length };
 }
