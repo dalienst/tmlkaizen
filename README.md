@@ -1,4 +1,4 @@
-# Kaizen Feedback & Project Tracker - Architecture Document
+# Kaizen Feedback & Project Tracker - Document
 
 ## 1. Project Overview
 An internal web application designed to digitalize the Kaizen (continuous improvement) process across multiple company branches. The system balances a frictionless, zero-login submission flow for employees with secure, role-based dashboards for management to track and act on submissions.
