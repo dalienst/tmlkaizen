@@ -80,25 +80,28 @@ export default async function DepartmentDetailPage({ params }: PageProps) {
   const completedCount = submissions.filter((s) => s.status === "COMPLETED").length;
 
   return (
-    <div style={{ maxWidth: "64rem", margin: "0 auto", padding: "1.5rem 1rem" }}>
-      <div style={{ marginBottom: "1.5rem" }}>
-        <Link href="/dashboard/departments" className="text-link" style={{ fontSize: "0.875rem", textDecoration: "none" }}>
-          ← Departments
-        </Link>
+    <div className="dashboard-main">
+      <div className="dashboard-header">
+        <div>
+          <Link href="/dashboard/departments" className="text-sub" style={{ fontSize: "0.8125rem", textDecoration: "none" }}>
+            ← Departments
+          </Link>
+          <h1 className="font-semibold" style={{ fontSize: "1rem", marginTop: "0.25rem" }}>
+            {dept.name}
+          </h1>
+        </div>
       </div>
 
-      {/* Main header block */}
-      <div className="card p-5 mb-6">
-        <div className="text-sub font-semibold" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.25rem" }}>
-          Department Profile
+      <div className="dashboard-content">
+        {/* Main header block */}
+        <div className="card p-5 mb-6">
+          <div className="text-sub font-semibold" style={{ fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.25rem" }}>
+            Department Profile
+          </div>
+          <div className="text-muted" style={{ fontSize: "0.8125rem", marginTop: "0.25rem" }}>
+            Location Branch: <strong>{dept.location.name}</strong>
+          </div>
         </div>
-        <h1 className="font-semibold" style={{ fontSize: "1.25rem", margin: 0, color: "var(--color-text)" }}>
-          {dept.name}
-        </h1>
-        <div className="text-muted" style={{ fontSize: "0.8125rem", marginTop: "0.25rem" }}>
-          Location Branch: <strong>{dept.location.name}</strong>
-        </div>
-      </div>
 
       {/* Metadata cards */}
       <div className="grid grid-cols-4 gap-4 mb-6">
@@ -209,9 +212,10 @@ export default async function DepartmentDetailPage({ params }: PageProps) {
                 ))}
               </div>
             )}
-          </div>
         </div>
       </div>
+    </div>
+    </div>
     </div>
   );
 }
