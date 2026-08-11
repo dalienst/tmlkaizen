@@ -26,6 +26,12 @@ export default function UsersTab({
 }: UsersTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("HR");
+
+  const getDeptLabel = (d: Department) => {
+    const loc = locations.find((l) => l.id === d.locationId);
+    return loc ? `${d.name} (${loc.name})` : d.name;
+  };
+
   const [selectedHRLocations, setSelectedHRLocations] = useState<string[]>([]);
   const [selectedGMLocations, setSelectedGMLocations] = useState<string[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -316,7 +322,7 @@ export default function UsersTab({
             <select id="user-department" name="departmentId" required={selectedRole === "DEPT_MANAGER"}>
               <option value="">Select department…</option>
               {departments.filter((d) => d.isActive).map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+                <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>
               ))}
             </select>
           </div>
@@ -446,7 +452,7 @@ export default function UsersTab({
               <select id="edit-user-department" name="departmentId" defaultValue={editTarget.departmentId ?? ""} required={editRole === "DEPT_MANAGER"}>
                 <option value="">Select department…</option>
                 {departments.filter((d) => d.isActive).map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
+                  <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>
                 ))}
               </select>
             </div>
