@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { kaizenProjects, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { syncUserToStaff } from "./admin-actions";
 import { auth } from "@/auth";
 import type { ProjectStatus } from "@/lib/constants";
 import bcrypt from "bcryptjs";
@@ -84,6 +85,18 @@ export async function updateUserProfile(formData: FormData) {
     await db.update(users).set({ name }).where(eq(users.id, userId));
   }
 
+  // Sync profile name to staff roster if linked as staff
+  if (user.staffId && user.departmentId) {
+    await syncUserToStaff(db, {
+      name,
+      email: user.email,
+      staffId: user.staffId,
+      departmentId: user.departmentId,
+      isActive: user.isActive,
+    });
+  }
+
   revalidatePath("/dashboard/settings");
+  revalidatePath("/dashboard/staff");
   return { success: true };
 }

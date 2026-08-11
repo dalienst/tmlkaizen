@@ -8,6 +8,7 @@ import {
   hrLocations,
   gmLocations,
   coreValues,
+  staff,
 } from "@/db/schema";
 import { eq, and, not } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -24,6 +25,55 @@ async function assertAdmin() {
     throw new Error("Unauthorized");
   }
 }
+
+// ─── Guard: SYSTEM_ADMIN or HR ──────────────────────────────────────────────────
+async function assertAdminOrHR() {
+  const session = await auth();
+  if (session?.user?.role !== "SYSTEM_ADMIN" && session?.user?.role !== "HR") {
+    throw new Error("Unauthorized");
+  }
+}
+
+// ─── Helper: sync user info into staff roster ───────────────────────────────────
+export async function syncUserToStaff(
+  tx: any,
+  data: {
+    name: string;
+    email: string;
+    staffId: string | null;
+    departmentId: string | null;
+    isActive: boolean;
+  }
+) {
+  if (!data.staffId || !data.departmentId) return;
+  const cleanStaffId = data.staffId.trim();
+  if (!cleanStaffId) return;
+
+  const existingStaff = await tx.query.staff.findFirst({
+    where: eq(staff.staffId, cleanStaffId),
+  });
+
+  if (existingStaff) {
+    await tx
+      .update(staff)
+      .set({
+        name: data.name,
+        email: data.email,
+        departmentId: data.departmentId,
+        isActive: data.isActive,
+      })
+      .where(eq(staff.id, existingStaff.id));
+  } else {
+    await tx.insert(staff).values({
+      staffId: cleanStaffId,
+      name: data.name,
+      email: data.email,
+      departmentId: data.departmentId,
+      isActive: data.isActive,
+    });
+  }
+}
+
 
 // ─── Locations ─────────────────────────────────────────────────────────────────
 
@@ -87,61 +137,79 @@ export async function toggleLocationActive(id: string, isActive: boolean) {
 // ─── Departments ───────────────────────────────────────────────────────────────
 
 export async function createDepartment(formData: FormData) {
-  await assertAdmin();
-  const name = (formData.get("name") as string).trim();
-  const locationId = formData.get("locationId") as string;
-  let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+  try {
+    await assertAdminOrHR();
+    const name = (formData.get("name") as string).trim();
+    const locationId = formData.get("locationId") as string;
+    let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
 
-  if (!name || !locationId) return { error: "Name and location are required." };
+    if (!name || !locationId) return { error: "Name and location are required." };
 
-  if (!code) {
-    code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (code.length > 10) code = code.substring(0, 10);
-    if (!code) code = "DEPT-" + Math.floor(1000 + Math.random() * 9000);
+    if (!code) {
+      code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (code.length > 10) code = code.substring(0, 10);
+      if (!code) code = "DEPT-" + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    // Verify unique department code
+    const existing = await db.query.departments.findFirst({
+      where: eq(departments.code, code),
+    });
+    if (existing) {
+      return { error: `Department code "${code}" is already in use.` };
+    }
+
+    await db.insert(departments).values({ name, code, locationId });
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/departments");
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || "Failed to create department." };
   }
-
-  // Verify unique department code
-  const existing = await db.query.departments.findFirst({
-    where: eq(departments.code, code),
-  });
-  if (existing) {
-    return { error: `Department code "${code}" is already in use.` };
-  }
-
-  await db.insert(departments).values({ name, code, locationId });
-  revalidatePath("/dashboard/admin");
 }
 
 export async function updateDepartment(formData: FormData) {
-  await assertAdmin();
-  const id = formData.get("id") as string;
-  const name = (formData.get("name") as string).trim();
-  let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+  try {
+    await assertAdminOrHR();
+    const id = formData.get("id") as string;
+    const name = (formData.get("name") as string).trim();
+    let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
 
-  if (!name || !id) return { error: "ID and Name are required." };
+    if (!name || !id) return { error: "ID and Name are required." };
 
-  if (!code) {
-    code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (code.length > 10) code = code.substring(0, 10);
-    if (!code) code = "DEPT-" + Math.floor(1000 + Math.random() * 9000);
+    if (!code) {
+      code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (code.length > 10) code = code.substring(0, 10);
+      if (!code) code = "DEPT-" + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    // Verify uniqueness
+    const existing = await db.query.departments.findFirst({
+      where: and(eq(departments.code, code), not(eq(departments.id, id))),
+    });
+    if (existing) {
+      return { error: `Department code "${code}" is already in use.` };
+    }
+
+    await db.update(departments).set({ name, code }).where(eq(departments.id, id));
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/departments");
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || "Failed to update department." };
   }
-
-  // Verify uniqueness
-  const existing = await db.query.departments.findFirst({
-    where: and(eq(departments.code, code), not(eq(departments.id, id))),
-  });
-  if (existing) {
-    return { error: `Department code "${code}" is already in use.` };
-  }
-
-  await db.update(departments).set({ name, code }).where(eq(departments.id, id));
-  revalidatePath("/dashboard/admin");
 }
 
 export async function toggleDepartmentActive(id: string, isActive: boolean) {
-  await assertAdmin();
-  await db.update(departments).set({ isActive }).where(eq(departments.id, id));
-  revalidatePath("/dashboard/admin");
+  try {
+    await assertAdminOrHR();
+    await db.update(departments).set({ isActive }).where(eq(departments.id, id));
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/departments");
+    return { success: true };
+  } catch (err: any) {
+    return { error: err.message || "Failed to update department status." };
+  }
 }
 
 // ─── Core Values ───────────────────────────────────────────────────────────────
@@ -222,6 +290,11 @@ export async function createUser(formData: FormData) {
   const { name, email, staffId, role, locationId, departmentId, hrLocationIds, gmLocationIds } =
     parsed.data;
 
+  // Validate that if staffId is provided, departmentId is also provided
+  if (staffId && !departmentId) {
+    return { error: "A department must be assigned when specifying a Staff ID." };
+  }
+
   // Check for existing email
   const existing = await db.query.users.findFirst({
     where: eq(users.email, email),
@@ -243,6 +316,17 @@ export async function createUser(formData: FormData) {
       departmentId: departmentId ?? null,
     })
     .returning({ id: users.id });
+
+  // Sync to staff roster if staffId is present
+  if (staffId && departmentId) {
+    await syncUserToStaff(db, {
+      name,
+      email,
+      staffId,
+      departmentId,
+      isActive: true,
+    });
+  }
 
   // For HR, insert hr_locations join rows
   if (role === "HR" && hrLocationIds) {
@@ -273,12 +357,27 @@ export async function createUser(formData: FormData) {
   }
 
   revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
 }
 
 export async function toggleUserActive(id: string, isActive: boolean) {
   await assertAdmin();
   await db.update(users).set({ isActive }).where(eq(users.id, id));
+
+  // Re-fetch user to sync active status to staff record
+  const user = await db.query.users.findFirst({ where: eq(users.id, id) });
+  if (user && user.staffId && user.departmentId) {
+    await syncUserToStaff(db, {
+      name: user.name,
+      email: user.email,
+      staffId: user.staffId,
+      departmentId: user.departmentId,
+      isActive,
+    });
+  }
+
   revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
 }
 
 const updateUserSchema = z.object({
@@ -320,11 +419,25 @@ export async function updateUser(formData: FormData) {
   const { id, name, email, staffId, role, locationId, departmentId, hrLocationIds, gmLocationIds } =
     parsed.data;
 
+  // Validate that if staffId is provided, departmentId is also provided
+  if (staffId && !departmentId) {
+    return { error: "A department must be assigned when specifying a Staff ID." };
+  }
+
   // Check if email already used by someone else
   const existing = await db.query.users.findFirst({
     where: and(eq(users.email, email), not(eq(users.id, id))),
   });
   if (existing) return { error: "A user with this email already exists." };
+
+  const current = await db.query.users.findFirst({
+    where: eq(users.id, id),
+  });
+
+  // Handle staffId change/removal (deactivate old record if it changed)
+  if (current && current.staffId && current.staffId !== staffId) {
+    await db.update(staff).set({ isActive: false }).where(eq(staff.staffId, current.staffId));
+  }
 
   await db
     .update(users)
@@ -334,9 +447,20 @@ export async function updateUser(formData: FormData) {
       staffId: staffId || null,
       role,
       locationId: role === "GM" ? locationId : null,
-      departmentId: role === "DEPT_MANAGER" ? departmentId : null,
+      departmentId: departmentId ?? null, // Save departmentId for all roles!
     })
     .where(eq(users.id, id));
+
+  // Sync to staff roster if staffId is present
+  if (staffId && departmentId) {
+    await syncUserToStaff(db, {
+      name,
+      email,
+      staffId,
+      departmentId,
+      isActive: current ? current.isActive : true,
+    });
+  }
 
   // Sync HR location mapping
   await db.delete(hrLocations).where(eq(hrLocations.hrUserId, id));
@@ -361,6 +485,7 @@ export async function updateUser(formData: FormData) {
   }
 
   revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/staff");
   return { success: true };
 }
 
