@@ -258,7 +258,7 @@ const createUserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   staffId: z.string().optional().nullable(),
-  role: z.enum(["HR", "GM", "DEPT_MANAGER"]),
+  role: z.enum(["SYSTEM_ADMIN", "HR", "GM", "DEPT_MANAGER"]),
   locationId: z.string().uuid().nullable(),
   departmentId: z.string().uuid().nullable(),
   hrLocationIds: z.string().optional().nullable(), // JSON array of string UUIDs
@@ -385,7 +385,7 @@ const updateUserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   staffId: z.string().optional().nullable(),
-  role: z.enum(["HR", "GM", "DEPT_MANAGER"]),
+  role: z.enum(["SYSTEM_ADMIN", "HR", "GM", "DEPT_MANAGER"]),
   locationId: z.string().uuid().nullable(),
   departmentId: z.string().uuid().nullable(),
   hrLocationIds: z.string().optional().nullable(),

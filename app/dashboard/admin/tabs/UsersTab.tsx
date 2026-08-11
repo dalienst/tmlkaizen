@@ -284,6 +284,7 @@ export default function UsersTab({
               onChange={(e) => { setSelectedRole(e.target.value); setSelectedHRLocations([]); }}
               required
             >
+              <option value="SYSTEM_ADMIN">System Admin</option>
               <option value="HR">HR</option>
               <option value="GM">General Manager</option>
               <option value="DEPT_MANAGER">Department Manager</option>
@@ -415,6 +416,7 @@ export default function UsersTab({
                 onChange={(e) => { setEditRole(e.target.value); setEditHRLocations([]); }}
                 required
               >
+                <option value="SYSTEM_ADMIN">System Admin</option>
                 <option value="HR">HR</option>
                 <option value="GM">General Manager</option>
                 <option value="DEPT_MANAGER">Department Manager</option>
