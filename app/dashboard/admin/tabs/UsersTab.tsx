@@ -308,17 +308,18 @@ export default function UsersTab({
             </div>
           )}
 
-          {selectedRole === "DEPT_MANAGER" && (
-            <div className="field">
-              <label htmlFor="user-department">Assigned department</label>
-              <select id="user-department" name="departmentId" required>
-                <option value="">Select department…</option>
-                {departments.filter((d) => d.isActive).map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          <div className="field">
+            <label htmlFor="user-department">
+              {selectedRole === "DEPT_MANAGER" ? "Assigned department" : "Home department (for staff roster)"}{" "}
+              {selectedRole !== "DEPT_MANAGER" && <span className="text-muted">(required if Staff ID is entered)</span>}
+            </label>
+            <select id="user-department" name="departmentId" required={selectedRole === "DEPT_MANAGER"}>
+              <option value="">Select department…</option>
+              {departments.filter((d) => d.isActive).map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
 
           {selectedRole === "HR" && (
             <div className="field">
@@ -437,17 +438,18 @@ export default function UsersTab({
               </div>
             )}
 
-            {editRole === "DEPT_MANAGER" && (
-              <div className="field">
-                <label htmlFor="edit-user-department">Assigned department</label>
-                <select id="edit-user-department" name="departmentId" defaultValue={editTarget.departmentId ?? ""} required>
-                  <option value="">Select department…</option>
-                  {departments.filter((d) => d.isActive).map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="field">
+              <label htmlFor="edit-user-department">
+                {editRole === "DEPT_MANAGER" ? "Assigned department" : "Home department (for staff roster)"}{" "}
+                {editRole !== "DEPT_MANAGER" && <span className="text-muted">(required if Staff ID is entered)</span>}
+              </label>
+              <select id="edit-user-department" name="departmentId" defaultValue={editTarget.departmentId ?? ""} required={editRole === "DEPT_MANAGER"}>
+                <option value="">Select department…</option>
+                {departments.filter((d) => d.isActive).map((d) => (
+                  <option key={d.id} value={d.id}>{d.name}</option>
+                ))}
+              </select>
+            </div>
 
             {editRole === "HR" && (
               <div className="field">
