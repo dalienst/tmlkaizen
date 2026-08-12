@@ -143,11 +143,17 @@ export default async function Home() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid var(--color-border)", padding: "1rem", textAlign: "center" }}>
+        <style>{`
+          .footer-key-link:hover {
+            opacity: 0.85 !important;
+          }
+        `}</style>
         <p className="text-muted" style={{ fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
           <span>&copy; {new Date().getFullYear()} Tamarind Group. All rights reserved.</span>
           <Link
             href="/dashboard"
             aria-label="Staff login"
+            className="footer-key-link"
             style={{
               color: "var(--color-text-muted)",
               opacity: 0.25,
@@ -155,8 +161,6 @@ export default async function Home() {
               alignItems: "center",
               transition: "opacity 150ms ease",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.25")}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
