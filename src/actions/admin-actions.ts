@@ -11,6 +11,7 @@ import {
   staff,
   groups,
   groupManagersGroups,
+  managersDepartments,
 } from "@/db/schema";
 import { eq, and, not, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -359,6 +360,7 @@ const createUserSchema = z.object({
   hrLocationIds: z.string().optional().nullable(), // JSON array of string UUIDs
   gmLocationIds: z.string().optional().nullable(), // JSON array of string UUIDs
   groupManagerGroupIds: z.string().optional().nullable(), // JSON array of string UUIDs
+  managerDepartmentIds: z.string().optional().nullable(), // JSON array of string UUIDs
 });
 
 export async function createUser(formData: FormData) {
@@ -377,6 +379,7 @@ export async function createUser(formData: FormData) {
     hrLocationIds: formData.get("hrLocationIds") as string | null,
     gmLocationIds: formData.get("gmLocationIds") as string | null,
     groupManagerGroupIds: formData.get("groupManagerGroupIds") as string | null,
+    managerDepartmentIds: formData.get("managerDepartmentIds") as string | null,
   };
 
   const parsed = createUserSchema.safeParse(raw);
@@ -394,11 +397,13 @@ export async function createUser(formData: FormData) {
     hrLocationIds,
     gmLocationIds,
     groupManagerGroupIds,
+    managerDepartmentIds,
   } = parsed.data;
 
   // Validate department assignment
-  if (role === "DEPT_MANAGER" && !departmentId) {
-    return { error: "A department must be assigned for Department Managers." };
+  const deptIds: string[] = managerDepartmentIds ? JSON.parse(managerDepartmentIds) : [];
+  if (role === "DEPT_MANAGER" && deptIds.length === 0 && !departmentId) {
+    return { error: "At least one department must be assigned for Department Managers." };
   }
 
   // Check for existing email
@@ -410,6 +415,8 @@ export async function createUser(formData: FormData) {
   const temporaryPassword = generatePassword();
   const passwordHash = await bcrypt.hash(temporaryPassword, 12);
 
+  const homeDeptId = departmentId || deptIds[0] || null;
+
   const [newUser] = await db
     .insert(users)
     .values({
@@ -419,17 +426,17 @@ export async function createUser(formData: FormData) {
       passwordHash,
       role: role as UserRole,
       locationId: locationId ?? null,
-      departmentId: departmentId ?? null,
+      departmentId: homeDeptId,
     })
     .returning({ id: users.id });
 
   // Sync to staff roster if staffId is present
-  if (staffId && departmentId) {
+  if (staffId && homeDeptId) {
     await syncUserToStaff(db, {
       name,
       email,
       staffId,
-      departmentId,
+      departmentId: homeDeptId,
       isActive: true,
     });
   }
@@ -462,6 +469,13 @@ export async function createUser(formData: FormData) {
         grpIds.map((gid) => ({ groupManagerId: newUser.id, groupId: gid }))
       );
     }
+  }
+
+  // For DEPT_MANAGER, insert managers_departments join rows
+  if (role === "DEPT_MANAGER" && deptIds.length > 0) {
+    await db.insert(managersDepartments).values(
+      deptIds.map((did) => ({ managerUserId: newUser.id, departmentId: did }))
+    );
   }
 
   // Send welcome email
@@ -507,8 +521,8 @@ const updateUserSchema = z.object({
   hrLocationIds: z.string().optional().nullable(),
   gmLocationIds: z.string().optional().nullable(),
   groupManagerGroupIds: z.string().optional().nullable(),
+  managerDepartmentIds: z.string().optional().nullable(),
 });
-
 export async function updateUser(formData: FormData) {
   await assertAdmin();
 
@@ -527,6 +541,7 @@ export async function updateUser(formData: FormData) {
     hrLocationIds: formData.get("hrLocationIds") as string | null,
     gmLocationIds: formData.get("gmLocationIds") as string | null,
     groupManagerGroupIds: formData.get("groupManagerGroupIds") as string | null,
+    managerDepartmentIds: formData.get("managerDepartmentIds") as string | null,
   };
 
   const parsed = updateUserSchema.safeParse(raw);
@@ -545,11 +560,13 @@ export async function updateUser(formData: FormData) {
     hrLocationIds,
     gmLocationIds,
     groupManagerGroupIds,
+    managerDepartmentIds,
   } = parsed.data;
 
   // Validate department assignment
-  if (role === "DEPT_MANAGER" && !departmentId) {
-    return { error: "A department must be assigned for Department Managers." };
+  const deptIds: string[] = managerDepartmentIds ? JSON.parse(managerDepartmentIds) : [];
+  if (role === "DEPT_MANAGER" && deptIds.length === 0 && !departmentId) {
+    return { error: "At least one department must be assigned for Department Managers." };
   }
 
   // Check if email already used by someone else
@@ -567,6 +584,8 @@ export async function updateUser(formData: FormData) {
     await db.update(staff).set({ isActive: false }).where(eq(staff.staffId, current.staffId));
   }
 
+  const homeDeptId = departmentId || deptIds[0] || null;
+
   await db
     .update(users)
     .set({
@@ -575,17 +594,17 @@ export async function updateUser(formData: FormData) {
       staffId: staffId || null,
       role,
       locationId: role === "GM" ? locationId : null,
-      departmentId: departmentId ?? null, // Save departmentId for all roles!
+      departmentId: homeDeptId, // Save primary/home department
     })
     .where(eq(users.id, id));
 
   // Sync to staff roster if staffId is present
-  if (staffId && departmentId) {
+  if (staffId && homeDeptId) {
     await syncUserToStaff(db, {
       name,
       email,
       staffId,
-      departmentId,
+      departmentId: homeDeptId,
       isActive: current ? current.isActive : true,
     });
   }
@@ -621,6 +640,14 @@ export async function updateUser(formData: FormData) {
         grpIds.map((gid) => ({ groupManagerId: id, groupId: gid }))
       );
     }
+  }
+
+  // Sync Department Manager department mapping
+  await db.delete(managersDepartments).where(eq(managersDepartments.managerUserId, id));
+  if (role === "DEPT_MANAGER" && deptIds.length > 0) {
+    await db.insert(managersDepartments).values(
+      deptIds.map((did) => ({ managerUserId: id, departmentId: did }))
+    );
   }
 
   revalidatePath("/dashboard/admin");

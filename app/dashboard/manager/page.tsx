@@ -1,21 +1,54 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { kaizenProjects, staff, departments, coreValues } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import {
+  kaizenProjects,
+  staff,
+  departments,
+  coreValues,
+  managersDepartments,
+} from "@/db/schema";
+import { eq, desc, inArray, asc } from "drizzle-orm";
 import ManagerDashboardClient from "./ManagerDashboardClient";
 import Link from "next/link";
 
 export const metadata = { title: "Manager Dashboard | Kaizen Tracker" };
 
-export default async function ManagerPage() {
+export default async function ManagerPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ dept?: string }>;
+}) {
   const session = await auth();
   if (!session || (session.user.role !== "DEPT_MANAGER" && session.user.role !== "SYSTEM_ADMIN")) {
     redirect("/dashboard");
   }
 
-  const deptId = session.user.departmentId;
-  if (!deptId) {
+  const userId = session.user.id as string;
+  const resolvedParams = await searchParams;
+  const deptParam = resolvedParams.dept;
+
+  // Retrieve managed departments
+  let deptIds: string[] = [];
+
+  if (session.user.role === "SYSTEM_ADMIN") {
+    const allDepts = await db.select({ id: departments.id }).from(departments);
+    deptIds = allDepts.map((d) => d.id);
+  } else {
+    const managedDepts = await db
+      .select({ departmentId: managersDepartments.departmentId })
+      .from(managersDepartments)
+      .where(eq(managersDepartments.managerUserId, userId));
+
+    deptIds = managedDepts.map((d) => d.departmentId);
+
+    // Backwards compatibility fallback to user.departmentId
+    if (deptIds.length === 0 && session.user.departmentId) {
+      deptIds = [session.user.departmentId];
+    }
+  }
+
+  if (deptIds.length === 0) {
     return (
       <div className="dashboard-main">
         <div className="dashboard-header">
@@ -23,14 +56,18 @@ export default async function ManagerPage() {
         </div>
         <div className="dashboard-content">
           <div className="alert alert-warning">
-            Your account is not assigned to a department. Please contact your system administrator.
+            Your account is not assigned to any department. Please contact your system administrator.
           </div>
         </div>
       </div>
     );
   }
 
-  const [projects, dept, allCoreValues] = await Promise.all([
+  // Selected department resolution
+  const selectedDeptId = deptParam && deptIds.includes(deptParam) ? deptParam : deptIds[0];
+
+  const [allManagedDepts, projects, allCoreValues] = await Promise.all([
+    db.select().from(departments).where(inArray(departments.id, deptIds)).orderBy(asc(departments.name)),
     db
       .select({
         project: kaizenProjects,
@@ -39,11 +76,12 @@ export default async function ManagerPage() {
       })
       .from(kaizenProjects)
       .leftJoin(staff, eq(kaizenProjects.staffId, staff.id))
-      .where(eq(kaizenProjects.departmentId, deptId))
+      .where(eq(kaizenProjects.departmentId, selectedDeptId))
       .orderBy(desc(kaizenProjects.createdAt)),
-    db.query.departments.findFirst({ where: eq(departments.id, deptId) }),
     db.select().from(coreValues),
   ]);
+
+  const selectedDept = allManagedDepts.find((d) => d.id === selectedDeptId);
 
   // Stats
   const totalCount = projects.length;
@@ -60,17 +98,30 @@ export default async function ManagerPage() {
     <div className="dashboard-main">
       <div className="dashboard-header">
         <div>
-          <div className="font-semibold" style={{ fontSize: "1rem" }}>Projects</div>
-          {dept && (
-            <div className="text-sub" style={{ fontSize: "0.8125rem" }}>{dept.name}</div>
+          <div className="font-semibold" style={{ fontSize: "1rem" }}>Projects Dashboard</div>
+          {selectedDept && (
+            <div className="text-sub" style={{ fontSize: "0.8125rem" }}>{selectedDept.name}</div>
           )}
         </div>
+        {allManagedDepts.length > 1 && (
+          <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+            {allManagedDepts.map((d) => (
+              <Link
+                key={d.id}
+                href={`/dashboard/manager?dept=${d.id}`}
+                className={`btn btn-sm ${selectedDeptId === d.id ? "btn-primary" : "btn-secondary"}`}
+              >
+                {d.name}
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
       <div className="dashboard-content">
         {/* Quick nav cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { href: deptId ? `/dashboard/departments/${deptId}` : "/dashboard/departments", label: "My Department", desc: dept?.name ?? "View details", icon: "🏢" },
+            { href: selectedDeptId ? `/dashboard/departments/${selectedDeptId}` : "/dashboard/departments", label: "Selected Department", desc: selectedDept?.name ?? "View details", icon: "🏢" },
             { href: "/dashboard/staff", label: "Staff", desc: "Department staff roster", icon: "👥" },
             { href: "/dashboard/analytics", label: "Analytics", desc: "Progress & stall detection", icon: "📊" },
           ].map((card) => (

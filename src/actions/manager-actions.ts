@@ -8,6 +8,7 @@ import {
   departments,
   gmLocations,
   hrLocations,
+  managersDepartments,
 } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -35,9 +36,19 @@ export async function updateProjectStatus(projectId: string, newStatus: ProjectS
   const role = session.user.role;
   const userId = session.user.id;
 
-  // DEPT_MANAGER can only update projects in their own department
-  if (role === "DEPT_MANAGER" && project.departmentId !== session.user.departmentId) {
-    throw new Error("Unauthorized");
+  // DEPT_MANAGER can only update projects in their own departments
+  if (role === "DEPT_MANAGER") {
+    const managedDepts = await db
+      .select({ departmentId: managersDepartments.departmentId })
+      .from(managersDepartments)
+      .where(eq(managersDepartments.managerUserId, userId));
+    const deptIds = managedDepts.map((d) => d.departmentId);
+    if (session.user.departmentId) {
+      deptIds.push(session.user.departmentId);
+    }
+    if (!deptIds.includes(project.departmentId)) {
+      throw new Error("Unauthorized");
+    }
   }
 
   // GM can only update projects in their managed locations

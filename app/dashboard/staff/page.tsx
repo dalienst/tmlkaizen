@@ -9,6 +9,7 @@ import {
   hrLocations,
   groupManagersGroups,
   kaizenProjects,
+  managersDepartments,
 } from "@/db/schema";
 import { eq, inArray, count } from "drizzle-orm";
 import Link from "next/link";
@@ -28,18 +29,25 @@ export default async function StaffPage() {
   let allowedDeptIds: string[] | null = null; // null = all
 
   if (role === "DEPT_MANAGER") {
-    const deptId = session.user.departmentId;
-    if (!deptId) {
+    const managedDepts = await db
+      .select({ departmentId: managersDepartments.departmentId })
+      .from(managersDepartments)
+      .where(eq(managersDepartments.managerUserId, userId));
+    let deptIds = managedDepts.map((d) => d.departmentId);
+    if (deptIds.length === 0 && session.user.departmentId) {
+      deptIds = [session.user.departmentId];
+    }
+    if (deptIds.length === 0) {
       return (
         <div className="dashboard-main">
           <div className="dashboard-header"><h1 className="font-semibold" style={{ fontSize: "1rem" }}>Department Staff</h1></div>
           <div className="dashboard-content">
-            <div className="alert alert-warning">You are not assigned to a department.</div>
+            <div className="alert alert-warning">You are not assigned to any department.</div>
           </div>
         </div>
       );
     }
-    allowedDeptIds = [deptId];
+    allowedDeptIds = deptIds;
   } else if (role === "GM") {
     const gmLocs = await db.select({ locationId: gmLocations.locationId }).from(gmLocations).where(eq(gmLocations.gmUserId, userId));
     const locationIds = gmLocs.map((l) => l.locationId);

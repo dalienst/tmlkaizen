@@ -9,6 +9,7 @@ import {
   gmLocations,
   hrLocations,
   groupManagersGroups,
+  managersDepartments,
 } from "@/db/schema";
 import { eq, inArray, count } from "drizzle-orm";
 import DepartmentsDashboardClient from "./DepartmentsDashboardClient";
@@ -27,8 +28,15 @@ export default async function DepartmentsPage() {
   let assignedLocationIds: string[] = [];
 
   if (role === "DEPT_MANAGER") {
-    // Manager sees only their own department
-    allowedDeptIds = session.user.departmentId ? [session.user.departmentId] : [];
+    const managedDepts = await db
+      .select({ departmentId: managersDepartments.departmentId })
+      .from(managersDepartments)
+      .where(eq(managersDepartments.managerUserId, userId));
+    let deptIds = managedDepts.map((d) => d.departmentId);
+    if (deptIds.length === 0 && session.user.departmentId) {
+      deptIds = [session.user.departmentId];
+    }
+    allowedDeptIds = deptIds;
   } else if (role === "GM") {
     const gmLocs = await db.select({ locationId: gmLocations.locationId }).from(gmLocations).where(eq(gmLocations.gmUserId, userId));
     const locationIds = gmLocs.map((l) => l.locationId);

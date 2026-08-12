@@ -33,6 +33,7 @@ interface AdminTabsProps {
   gmLocationsMapped: { gmUserId: string; locationId: string }[];
   groups: Group[];
   groupManagersGroupsMapped: { groupManagerId: string; groupId: string }[];
+  managersDepartmentsMapped: { managerUserId: string; departmentId: string }[];
   defaultTab?: string;
 }
 
@@ -45,6 +46,7 @@ export default function AdminTabs({
   gmLocationsMapped,
   groups,
   groupManagersGroupsMapped,
+  managersDepartmentsMapped,
   defaultTab,
 }: AdminTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>(() => {
@@ -104,6 +106,7 @@ export default function AdminTabs({
           hrLocationsMapped={hrLocationsMapped}
           gmLocationsMapped={gmLocationsMapped}
           groupManagersGroupsMapped={groupManagersGroupsMapped}
+          managersDepartmentsMapped={managersDepartmentsMapped}
         />
       )}
     </div>

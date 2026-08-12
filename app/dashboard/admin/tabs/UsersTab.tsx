@@ -17,6 +17,7 @@ interface UsersTabProps {
   hrLocationsMapped: { hrUserId: string; locationId: string }[];
   gmLocationsMapped: { gmUserId: string; locationId: string }[];
   groupManagersGroupsMapped: { groupManagerId: string; groupId: string }[];
+  managersDepartmentsMapped: { managerUserId: string; departmentId: string }[];
 }
 
 export default function UsersTab({
@@ -27,6 +28,7 @@ export default function UsersTab({
   hrLocationsMapped,
   gmLocationsMapped,
   groupManagersGroupsMapped,
+  managersDepartmentsMapped,
 }: UsersTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("HR");
@@ -39,6 +41,7 @@ export default function UsersTab({
   const [selectedHRLocations, setSelectedHRLocations] = useState<string[]>([]);
   const [selectedGMLocations, setSelectedGMLocations] = useState<string[]>([]);
   const [selectedGroupManagerGroups, setSelectedGroupManagerGroups] = useState<string[]>([]);
+  const [selectedManagerDepartments, setSelectedManagerDepartments] = useState<string[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [editTarget, setEditTarget] = useState<User | null>(null);
@@ -46,12 +49,13 @@ export default function UsersTab({
   const [editHRLocations, setEditHRLocations] = useState<string[]>([]);
   const [editGMLocations, setEditGMLocations] = useState<string[]>([]);
   const [editGroupManagerGroups, setEditGroupManagerGroups] = useState<string[]>([]);
+  const [editManagerDepartments, setEditManagerDepartments] = useState<string[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
 
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // ── HR / GM / Group Manager Checklist Toggles ───────────────────────────────
+  // ── HR / GM / Group Manager / Department Manager Checklist Toggles ───────────
   function toggleHRLocation(id: string) {
     setSelectedHRLocations((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
@@ -65,6 +69,11 @@ export default function UsersTab({
   function toggleGroupManagerGroup(id: string) {
     setSelectedGroupManagerGroups((prev) =>
       prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+    );
+  }
+  function toggleManagerDepartment(id: string) {
+    setSelectedManagerDepartments((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
     );
   }
   function toggleEditHRLocation(id: string) {
@@ -82,6 +91,11 @@ export default function UsersTab({
       prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
     );
   }
+  function toggleEditManagerDepartment(id: string) {
+    setEditManagerDepartments((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  }
 
   // ── Actions ──────────────────────────────────────────────────────────────────
   async function handleCreate(fd: FormData) {
@@ -95,6 +109,9 @@ export default function UsersTab({
     if (selectedRole === "GROUP_MANAGER") {
       fd.set("groupManagerGroupIds", JSON.stringify(selectedGroupManagerGroups));
     }
+    if (selectedRole === "DEPT_MANAGER") {
+      fd.set("managerDepartmentIds", JSON.stringify(selectedManagerDepartments));
+    }
     startTransition(async () => {
       const result = await createUser(fd);
       if (result?.error) {
@@ -106,6 +123,7 @@ export default function UsersTab({
         setSelectedHRLocations([]);
         setSelectedGMLocations([]);
         setSelectedGroupManagerGroups([]);
+        setSelectedManagerDepartments([]);
         toast.success("User created successfully!");
       }
     });
@@ -122,6 +140,9 @@ export default function UsersTab({
     if (editRole === "GROUP_MANAGER") {
       fd.set("groupManagerGroupIds", JSON.stringify(editGroupManagerGroups));
     }
+    if (editRole === "DEPT_MANAGER") {
+      fd.set("managerDepartmentIds", JSON.stringify(editManagerDepartments));
+    }
     startTransition(async () => {
       const result = await updateUser(fd);
       if (result?.error) {
@@ -129,6 +150,7 @@ export default function UsersTab({
         toast.error(result.error);
       } else {
         setEditTarget(null);
+        setEditManagerDepartments([]);
         toast.success("User updated successfully!");
       }
     });
@@ -169,6 +191,10 @@ export default function UsersTab({
       .filter((gg) => gg.groupManagerId === u.id)
       .map((gg) => gg.groupId);
     setEditGroupManagerGroups(selectedGroups);
+    const selectedDepts = managersDepartmentsMapped
+      .filter((md) => md.managerUserId === u.id)
+      .map((md) => md.departmentId);
+    setEditManagerDepartments(selectedDepts);
     setEditError(null);
   }
 
@@ -372,14 +398,38 @@ export default function UsersTab({
             </div>
           )}
 
+          {/* Department Manager multi-department checkboxes */}
+          {selectedRole === "DEPT_MANAGER" && (
+            <div className="field">
+              <label>Assigned departments <span className="text-muted">(select all that apply)</span></label>
+              <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                {departments.filter((d) => d.isActive).map((d) => (
+                  <label
+                    key={d.id}
+                    className={`checkbox-chip${selectedManagerDepartments.includes(d.id) ? " selected" : ""}`}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <input
+                      type="checkbox"
+                      style={{ display: "none" }}
+                      checked={selectedManagerDepartments.includes(d.id)}
+                      onChange={() => toggleManagerDepartment(d.id)}
+                    />
+                    {getDeptLabel(d)}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="field">
             <label htmlFor="user-department">
-              {selectedRole === "DEPT_MANAGER" ? "Assigned department" : "Home department (for staff roster)"}{" "}
+              {selectedRole === "DEPT_MANAGER" ? "Primary department" : "Home department (for staff roster)"}{" "}
               {selectedRole !== "DEPT_MANAGER" && selectedRole !== "GM" && selectedRole !== "HR" && selectedRole !== "GROUP_MANAGER" && (
                 <span className="text-muted">(required if Staff ID is entered)</span>
               )}
             </label>
-            <select id="user-department" name="departmentId" required={selectedRole === "DEPT_MANAGER"}>
+            <select id="user-department" name="departmentId">
               <option value="">Select department…</option>
               {departments.filter((d) => d.isActive).map((d) => (
                 <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>
@@ -477,6 +527,7 @@ export default function UsersTab({
                   setEditHRLocations([]);
                   setEditGMLocations([]);
                   setEditGroupManagerGroups([]);
+                  setEditManagerDepartments([]);
                 }}
                 required
               >
@@ -535,14 +586,38 @@ export default function UsersTab({
               </div>
             )}
 
+            {/* Department Manager multi-department checkboxes */}
+            {editRole === "DEPT_MANAGER" && (
+              <div className="field">
+                <label>Assigned departments <span className="text-muted">(select all that apply)</span></label>
+                <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                  {departments.filter((d) => d.isActive).map((d) => (
+                    <label
+                      key={d.id}
+                      className={`checkbox-chip${editManagerDepartments.includes(d.id) ? " selected" : ""}`}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        style={{ display: "none" }}
+                        checked={editManagerDepartments.includes(d.id)}
+                        onChange={() => toggleEditManagerDepartment(d.id)}
+                      />
+                      {getDeptLabel(d)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="field">
               <label htmlFor="edit-user-department">
-                {editRole === "DEPT_MANAGER" ? "Assigned department" : "Home department (for staff roster)"}{" "}
+                {editRole === "DEPT_MANAGER" ? "Primary department" : "Home department (for staff roster)"}{" "}
                 {editRole !== "DEPT_MANAGER" && editRole !== "GM" && editRole !== "HR" && editRole !== "GROUP_MANAGER" && (
                   <span className="text-muted">(required if Staff ID is entered)</span>
                 )}
               </label>
-              <select id="edit-user-department" name="departmentId" defaultValue={editTarget.departmentId ?? ""} required={editRole === "DEPT_MANAGER"}>
+              <select id="edit-user-department" name="departmentId" defaultValue={editTarget.departmentId ?? ""}>
                 <option value="">Select department…</option>
                 {departments.filter((d) => d.isActive).map((d) => (
                   <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>

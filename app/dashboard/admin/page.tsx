@@ -10,6 +10,7 @@ import {
   gmLocations,
   groups,
   groupManagersGroups,
+  managersDepartments,
 } from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
 import AdminTabs from "./AdminTabs";
@@ -38,6 +39,7 @@ export default async function AdminPage({
     allGMLocationsMapped,
     allGroups,
     allGroupManagersGroupsMapped,
+    allManagersDepartmentsMapped,
   ] = await Promise.all([
     db.select().from(locations).orderBy(asc(locations.name)),
     db.select().from(departments).orderBy(asc(departments.name)),
@@ -47,6 +49,7 @@ export default async function AdminPage({
     db.select().from(gmLocations),
     db.select().from(groups).orderBy(asc(groups.name)),
     db.select().from(groupManagersGroups),
+    db.select().from(managersDepartments),
   ]);
 
   return (
@@ -66,6 +69,7 @@ export default async function AdminPage({
           gmLocationsMapped={allGMLocationsMapped}
           groups={allGroups}
           groupManagersGroupsMapped={allGroupManagersGroupsMapped}
+          managersDepartmentsMapped={allManagersDepartmentsMapped}
           defaultTab={defaultTab}
         />
       </div>

@@ -136,6 +136,21 @@ export const groupManagersGroups = pgTable(
   (t) => [primaryKey({ columns: [t.groupManagerId, t.groupId] })]
 );
 
+// ─── Department Managers ↔ Departments (many-to-many) ──────────────────────────
+
+export const managersDepartments = pgTable(
+  "managers_departments",
+  {
+    managerUserId: uuid("manager_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    departmentId: uuid("department_id")
+      .notNull()
+      .references(() => departments.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.managerUserId, t.departmentId] })]
+);
+
 // ─── Core Values ──────────────────────────────────────────────────────────────
 
 export const coreValues = pgTable("core_values", {
@@ -215,6 +230,7 @@ export const departmentsRelations = relations(departments, ({ one, many }) => ({
   staff: many(staff),
   managerUsers: many(users),
   kaizenProjects: many(kaizenProjects),
+  managersDepartments: many(managersDepartments),
 }));
 
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -229,6 +245,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   hrLocations: many(hrLocations),
   gmLocations: many(gmLocations),
   groupManagersGroups: many(groupManagersGroups),
+  managersDepartments: many(managersDepartments),
 }));
 
 export const hrLocationsRelations = relations(hrLocations, ({ one }) => ({
@@ -266,6 +283,17 @@ export const groupManagersGroupsRelations = relations(groupManagersGroups, ({ on
   group: one(groups, {
     fields: [groupManagersGroups.groupId],
     references: [groups.id],
+  }),
+}));
+
+export const managersDepartmentsRelations = relations(managersDepartments, ({ one }) => ({
+  user: one(users, {
+    fields: [managersDepartments.managerUserId],
+    references: [users.id],
+  }),
+  department: one(departments, {
+    fields: [managersDepartments.departmentId],
+    references: [departments.id],
   }),
 }));
 
