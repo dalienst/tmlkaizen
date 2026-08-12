@@ -143,8 +143,38 @@ export default async function Home() {
 
       {/* Footer */}
       <footer style={{ borderTop: "1px solid var(--color-border)", padding: "1rem", textAlign: "center" }}>
-        <p className="text-muted" style={{ fontSize: "0.75rem" }}>
-          &copy; {new Date().getFullYear()} Tamarind Group. All rights reserved.
+        <p className="text-muted" style={{ fontSize: "0.75rem", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.375rem" }}>
+          <span>&copy; {new Date().getFullYear()} Tamarind Group. All rights reserved.</span>
+          <Link
+            href="/dashboard"
+            aria-label="Staff login"
+            style={{
+              color: "var(--color-text-muted)",
+              opacity: 0.25,
+              display: "inline-flex",
+              alignItems: "center",
+              transition: "opacity 150ms ease",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.25")}
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="7.5" cy="15.5" r="5.5" />
+              <path d="m21 2-9.6 9.6" />
+              <path d="m15.5 7.5 3 3" />
+              <path d="M17.5 5.5 20 8" />
+            </svg>
+          </Link>
         </p>
       </footer>
     </div>
