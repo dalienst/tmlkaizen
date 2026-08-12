@@ -8,6 +8,7 @@ import {
   createLocation,
   updateLocation,
   toggleLocationActive,
+  bulkCreateLocations,
 } from "@/actions/admin-actions";
 import { formatDate } from "@/lib/constants";
 import { toast } from "react-hot-toast";
@@ -20,6 +21,57 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Location | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const [isBulkOpen, setBulkOpen] = useState(false);
+  const [bulkRows, setBulkRows] = useState<{ name: string; code: string }[]>([
+    { name: "", code: "" },
+    { name: "", code: "" },
+    { name: "", code: "" },
+  ]);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
+  function addBulkRow() {
+    if (bulkRows.length >= 50) return;
+    setBulkRows((prev) => [...prev, { name: "", code: "" }]);
+  }
+
+  function removeBulkRow(idx: number) {
+    if (bulkRows.length <= 1) return;
+    setBulkRows((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateBulkRow(idx: number, field: "name" | "code", val: string) {
+    setBulkRows((prev) =>
+      prev.map((row, i) => (i === idx ? { ...row, [field]: val } : row))
+    );
+  }
+
+  async function handleBulkSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBulkError(null);
+
+    const validRows = bulkRows.filter((r) => r.name.trim() !== "");
+    if (validRows.length === 0) {
+      setBulkError("Please enter a name for at least one location.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await bulkCreateLocations(validRows);
+      if (res?.error) {
+        setBulkError(res.error);
+        toast.error(res.error);
+      } else {
+        setBulkOpen(false);
+        setBulkRows([
+          { name: "", code: "" },
+          { name: "", code: "" },
+          { name: "", code: "" },
+        ]);
+        toast.success(`Locations created successfully.`);
+      }
+    });
+  }
 
   function handleToggle(loc: Location) {
     startTransition(async () => {
@@ -61,9 +113,14 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
             Physical company branches
           </div>
         </div>
-        <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
-          + Add location
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setBulkOpen(true)}>
+            Bulk Add
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+            + Add location
+          </Button>
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -218,6 +275,90 @@ export default function LocationsTab({ locations }: LocationsTabProps) {
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Bulk Add Locations Modal */}
+      <Modal
+        isOpen={isBulkOpen}
+        onClose={() => { setBulkOpen(false); setBulkError(null); }}
+        title="Bulk Add Locations"
+        maxWidth="44rem"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setBulkOpen(false)}>Cancel</Button>
+            <Button variant="primary" size="sm" type="submit" form="bulk-location-form" isLoading={isPending}>
+              Save all ({bulkRows.length})
+            </Button>
+          </>
+        }
+      >
+        <form id="bulk-location-form" onSubmit={handleBulkSubmit}>
+          {bulkError && <div className="alert alert-error mb-4">{bulkError}</div>}
+          <div className="alert alert-info mb-4" style={{ fontSize: "0.8125rem" }}>
+            Add up to 50 locations. Duplicates by Location Code will be automatically skipped or flagged.
+          </div>
+
+          <div style={{ maxHeight: "24rem", overflowY: "auto", paddingRight: "0.5rem" }}>
+            <div className="flex gap-2 font-semibold text-xs text-sub mb-2" style={{ paddingRight: "2rem" }}>
+              <div style={{ flex: 2 }}>Location Name *</div>
+              <div style={{ flex: 1.5 }}>Location Code (optional, e.g. NRB)</div>
+            </div>
+
+            {bulkRows.map((row, idx) => (
+              <div key={idx} className="flex gap-2 items-center mb-2">
+                <input
+                  type="text"
+                  placeholder="e.g. Nairobi Branch"
+                  value={row.name}
+                  onChange={(e) => updateBulkRow(idx, "name", e.target.value)}
+                  required={idx === 0}
+                  style={{ flex: 2, padding: "0.375rem 0.5rem" }}
+                />
+                <input
+                  type="text"
+                  placeholder="e.g. NRB"
+                  value={row.code}
+                  onChange={(e) => updateBulkRow(idx, "code", e.target.value)}
+                  style={{ flex: 1.5, padding: "0.375rem 0.5rem", textTransform: "uppercase" }}
+                />
+                <div style={{ width: "2rem", display: "flex", justifyContent: "center" }}>
+                  {bulkRows.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeBulkRow(idx)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--color-danger)",
+                        cursor: "pointer",
+                        fontSize: "1rem",
+                        padding: "0.25rem",
+                      }}
+                      title="Remove row"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: "1rem" }}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={bulkRows.length >= 50}
+              onClick={addBulkRow}
+            >
+              + Add another row
+            </Button>
+            <span className="text-muted ml-3" style={{ fontSize: "0.75rem" }}>
+              ({bulkRows.length} / 50 rows)
+            </span>
+          </div>
+        </form>
       </Modal>
     </div>
   );

@@ -134,6 +134,47 @@ export async function toggleLocationActive(id: string, isActive: boolean) {
   revalidatePath("/dashboard/admin");
 }
 
+export async function bulkCreateLocations(
+  rows: { name: string; code?: string }[]
+) {
+  await assertAdmin();
+  if (rows.length === 0) return { error: "No locations to create." };
+
+  const allLocs = await db.select({ code: locations.code }).from(locations);
+  const existingCodes = new Set(allLocs.map((l) => l.code.toUpperCase()));
+
+  const toInsert: { name: string; code: string }[] = [];
+  const codesInPayload = new Set<string>();
+
+  for (let i = 0; i < rows.length; i++) {
+    const name = rows[i].name.trim();
+    let code = rows[i].code?.trim().toUpperCase() || "";
+
+    if (!name) continue; // Skip empty rows
+
+    if (!code) {
+      code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (code.length > 10) code = code.substring(0, 10);
+      if (!code) code = "LOC-" + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    if (existingCodes.has(code) || codesInPayload.has(code)) {
+      return { error: `Location code "${code}" (Row ${i + 1}) is already in use.` };
+    }
+
+    codesInPayload.add(code);
+    toInsert.push({ name, code });
+  }
+
+  if (toInsert.length === 0) {
+    return { error: "Please enter details for at least one location." };
+  }
+
+  await db.insert(locations).values(toInsert).onConflictDoNothing({ target: locations.code });
+  revalidatePath("/dashboard/admin");
+  return { created: toInsert.length };
+}
+
 // ─── Departments ───────────────────────────────────────────────────────────────
 
 export async function createDepartment(formData: FormData) {
@@ -209,6 +250,53 @@ export async function toggleDepartmentActive(id: string, isActive: boolean) {
     return { success: true };
   } catch (err: any) {
     return { error: err.message || "Failed to update department status." };
+  }
+}
+
+export async function bulkCreateDepartments(
+  rows: { name: string; code?: string; locationId: string }[]
+) {
+  try {
+    await assertAdminOrHR();
+    if (rows.length === 0) return { error: "No departments to create." };
+
+    const allDepts = await db.select({ code: departments.code }).from(departments);
+    const existingCodes = new Set(allDepts.map((d) => d.code.toUpperCase()));
+
+    const toInsert: { name: string; code: string; locationId: string }[] = [];
+    const codesInPayload = new Set<string>();
+
+    for (let i = 0; i < rows.length; i++) {
+      const name = rows[i].name.trim();
+      const locationId = rows[i].locationId;
+      let code = rows[i].code?.trim().toUpperCase() || "";
+
+      if (!name || !locationId) continue; // Skip empty rows
+
+      if (!code) {
+        code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (code.length > 10) code = code.substring(0, 10);
+        if (!code) code = "DEPT-" + Math.floor(1000 + Math.random() * 9000);
+      }
+
+      if (existingCodes.has(code) || codesInPayload.has(code)) {
+        return { error: `Department code "${code}" (Row ${i + 1}) is already in use.` };
+      }
+
+      codesInPayload.add(code);
+      toInsert.push({ name, code, locationId });
+    }
+
+    if (toInsert.length === 0) {
+      return { error: "Please enter details for at least one department." };
+    }
+
+    await db.insert(departments).values(toInsert).onConflictDoNothing({ target: departments.code });
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/departments");
+    return { success: true, created: toInsert.length };
+  } catch (err: any) {
+    return { error: err.message || "Failed to create departments." };
   }
 }
 

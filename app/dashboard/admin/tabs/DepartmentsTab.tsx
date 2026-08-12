@@ -8,6 +8,7 @@ import {
   createDepartment,
   updateDepartment,
   toggleDepartmentActive,
+  bulkCreateDepartments,
 } from "@/actions/admin-actions";
 import { toast } from "react-hot-toast";
 
@@ -24,6 +25,57 @@ export default function DepartmentsTab({
   const [editTarget, setEditTarget] = useState<Department | null>(null);
   const [filterLocationId, setFilterLocationId] = useState<string | "all">("all");
   const [isPending, startTransition] = useTransition();
+
+  const [isBulkOpen, setBulkOpen] = useState(false);
+  const [bulkRows, setBulkRows] = useState<{ name: string; code: string; locationId: string }[]>([
+    { name: "", code: "", locationId: "" },
+    { name: "", code: "", locationId: "" },
+    { name: "", code: "", locationId: "" },
+  ]);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
+  function addBulkRow() {
+    if (bulkRows.length >= 50) return;
+    setBulkRows((prev) => [...prev, { name: "", code: "", locationId: "" }]);
+  }
+
+  function removeBulkRow(idx: number) {
+    if (bulkRows.length <= 1) return;
+    setBulkRows((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function updateBulkRow(idx: number, field: "name" | "code" | "locationId", val: string) {
+    setBulkRows((prev) =>
+      prev.map((row, i) => (i === idx ? { ...row, [field]: val } : row))
+    );
+  }
+
+  async function handleBulkSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setBulkError(null);
+
+    const validRows = bulkRows.filter((r) => r.name.trim() !== "" && r.locationId !== "");
+    if (validRows.length === 0) {
+      setBulkError("Please fill in Name and Location for at least one department.");
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await bulkCreateDepartments(validRows);
+      if (res?.error) {
+        setBulkError(res.error);
+        toast.error(res.error);
+      } else {
+        setBulkOpen(false);
+        setBulkRows([
+          { name: "", code: "", locationId: "" },
+          { name: "", code: "", locationId: "" },
+          { name: "", code: "", locationId: "" },
+        ]);
+        toast.success(`Departments created successfully.`);
+      }
+    });
+  }
 
   const filtered =
     filterLocationId === "all"
@@ -73,9 +125,14 @@ export default function DepartmentsTab({
             Operational units within branches
           </div>
         </div>
-        <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
-          + Add department
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={() => setBulkOpen(true)}>
+            Bulk Add
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+            + Add department
+          </Button>
+        </div>
       </div>
 
       {/* Filter */}
@@ -222,6 +279,102 @@ export default function DepartmentsTab({
             </div>
           </form>
         )}
+      </Modal>
+
+      {/* Bulk Add Departments Modal */}
+      <Modal
+        isOpen={isBulkOpen}
+        onClose={() => { setBulkOpen(false); setBulkError(null); }}
+        title="Bulk Add Departments"
+        maxWidth="54rem"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setBulkOpen(false)}>Cancel</Button>
+            <Button variant="primary" size="sm" type="submit" form="bulk-department-form" isLoading={isPending}>
+              Save all ({bulkRows.length})
+            </Button>
+          </>
+        }
+      >
+        <form id="bulk-department-form" onSubmit={handleBulkSubmit}>
+          {bulkError && <div className="alert alert-error mb-4">{bulkError}</div>}
+          <div className="alert alert-info mb-4" style={{ fontSize: "0.8125rem" }}>
+            Add up to 50 departments. Duplicates by Department Code will be automatically skipped or flagged.
+          </div>
+
+          <div style={{ maxHeight: "24rem", overflowY: "auto", paddingRight: "0.5rem" }}>
+            <div className="flex gap-2 font-semibold text-xs text-sub mb-2" style={{ paddingRight: "2rem" }}>
+              <div style={{ flex: 2 }}>Department Name *</div>
+              <div style={{ flex: 1.5 }}>Department Code (optional, e.g. FIN)</div>
+              <div style={{ flex: 2 }}>Location *</div>
+            </div>
+
+            {bulkRows.map((row, idx) => (
+              <div key={idx} className="flex gap-2 items-center mb-2">
+                <input
+                  type="text"
+                  placeholder="e.g. Finance"
+                  value={row.name}
+                  onChange={(e) => updateBulkRow(idx, "name", e.target.value)}
+                  required={idx === 0}
+                  style={{ flex: 2, padding: "0.375rem 0.5rem" }}
+                />
+                <input
+                  type="text"
+                  placeholder="e.g. FIN"
+                  value={row.code}
+                  onChange={(e) => updateBulkRow(idx, "code", e.target.value)}
+                  style={{ flex: 1.5, padding: "0.375rem 0.5rem", textTransform: "uppercase" }}
+                />
+                <select
+                  value={row.locationId}
+                  onChange={(e) => updateBulkRow(idx, "locationId", e.target.value)}
+                  required={idx === 0}
+                  style={{ flex: 2, padding: "0.375rem 0.5rem" }}
+                >
+                  <option value="">Select location…</option>
+                  {locations.filter((l) => l.isActive).map((l) => (
+                    <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+                <div style={{ width: "2rem", display: "flex", justifyContent: "center" }}>
+                  {bulkRows.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeBulkRow(idx)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--color-danger)",
+                        cursor: "pointer",
+                        fontSize: "1rem",
+                        padding: "0.25rem",
+                      }}
+                      title="Remove row"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: "1rem" }}>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={bulkRows.length >= 50}
+              onClick={addBulkRow}
+            >
+              + Add another row
+            </Button>
+            <span className="text-muted ml-3" style={{ fontSize: "0.75rem" }}>
+              ({bulkRows.length} / 50 rows)
+            </span>
+          </div>
+        </form>
       </Modal>
     </div>
   );
