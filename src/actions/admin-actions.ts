@@ -9,6 +9,8 @@ import {
   gmLocations,
   coreValues,
   staff,
+  groups,
+  groupManagersGroups,
 } from "@/db/schema";
 import { eq, and, not } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -183,6 +185,8 @@ export async function createDepartment(formData: FormData) {
     const name = (formData.get("name") as string).trim();
     const locationId = formData.get("locationId") as string;
     let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+    const groupIdVal = formData.get("groupId");
+    const groupId = groupIdVal && groupIdVal !== "" ? (groupIdVal as string) : null;
 
     if (!name || !locationId) return { error: "Name and location are required." };
 
@@ -200,7 +204,7 @@ export async function createDepartment(formData: FormData) {
       return { error: `Department code "${code}" is already in use.` };
     }
 
-    await db.insert(departments).values({ name, code, locationId });
+    await db.insert(departments).values({ name, code, locationId, groupId });
     revalidatePath("/dashboard/admin");
     revalidatePath("/dashboard/departments");
     return { success: true };
@@ -215,6 +219,8 @@ export async function updateDepartment(formData: FormData) {
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string).trim();
     let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+    const groupIdVal = formData.get("groupId");
+    const groupId = groupIdVal && groupIdVal !== "" ? (groupIdVal as string) : null;
 
     if (!name || !id) return { error: "ID and Name are required." };
 
@@ -232,7 +238,7 @@ export async function updateDepartment(formData: FormData) {
       return { error: `Department code "${code}" is already in use.` };
     }
 
-    await db.update(departments).set({ name, code }).where(eq(departments.id, id));
+    await db.update(departments).set({ name, code, groupId }).where(eq(departments.id, id));
     revalidatePath("/dashboard/admin");
     revalidatePath("/dashboard/departments");
     return { success: true };
@@ -254,7 +260,7 @@ export async function toggleDepartmentActive(id: string, isActive: boolean) {
 }
 
 export async function bulkCreateDepartments(
-  rows: { name: string; code?: string; locationId: string }[]
+  rows: { name: string; code?: string; locationId: string; groupId?: string }[]
 ) {
   try {
     await assertAdminOrHR();
@@ -263,13 +269,14 @@ export async function bulkCreateDepartments(
     const allDepts = await db.select({ code: departments.code }).from(departments);
     const existingCodes = new Set(allDepts.map((d) => d.code.toUpperCase()));
 
-    const toInsert: { name: string; code: string; locationId: string }[] = [];
+    const toInsert: { name: string; code: string; locationId: string; groupId: string | null }[] = [];
     const codesInPayload = new Set<string>();
 
     for (let i = 0; i < rows.length; i++) {
       const name = rows[i].name.trim();
       const locationId = rows[i].locationId;
       let code = rows[i].code?.trim().toUpperCase() || "";
+      const groupId = rows[i].groupId ? (rows[i].groupId as string) : null;
 
       if (!name || !locationId) continue; // Skip empty rows
 
@@ -284,7 +291,7 @@ export async function bulkCreateDepartments(
       }
 
       codesInPayload.add(code);
-      toInsert.push({ name, code, locationId });
+      toInsert.push({ name, code, locationId, groupId });
     }
 
     if (toInsert.length === 0) {
@@ -346,11 +353,12 @@ const createUserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   staffId: z.string().optional().nullable(),
-  role: z.enum(["SYSTEM_ADMIN", "HR", "GM", "DEPT_MANAGER"]),
+  role: z.enum(["SYSTEM_ADMIN", "HR", "GM", "DEPT_MANAGER", "GROUP_MANAGER"]),
   locationId: z.string().uuid().nullable(),
   departmentId: z.string().uuid().nullable(),
   hrLocationIds: z.string().optional().nullable(), // JSON array of string UUIDs
   gmLocationIds: z.string().optional().nullable(), // JSON array of string UUIDs
+  groupManagerGroupIds: z.string().optional().nullable(), // JSON array of string UUIDs
 });
 
 export async function createUser(formData: FormData) {
@@ -368,6 +376,7 @@ export async function createUser(formData: FormData) {
     departmentId: departmentIdVal && departmentIdVal !== "" ? (departmentIdVal as string) : null,
     hrLocationIds: formData.get("hrLocationIds") as string | null,
     gmLocationIds: formData.get("gmLocationIds") as string | null,
+    groupManagerGroupIds: formData.get("groupManagerGroupIds") as string | null,
   };
 
   const parsed = createUserSchema.safeParse(raw);
@@ -375,12 +384,21 @@ export async function createUser(formData: FormData) {
     return { error: "Please fill in all required fields correctly." };
   }
 
-  const { name, email, staffId, role, locationId, departmentId, hrLocationIds, gmLocationIds } =
-    parsed.data;
+  const {
+    name,
+    email,
+    staffId,
+    role,
+    locationId,
+    departmentId,
+    hrLocationIds,
+    gmLocationIds,
+    groupManagerGroupIds,
+  } = parsed.data;
 
-  // Validate that if staffId is provided, departmentId is also provided
-  if (staffId && !departmentId) {
-    return { error: "A department must be assigned when specifying a Staff ID." };
+  // Validate department assignment
+  if (role === "DEPT_MANAGER" && !departmentId) {
+    return { error: "A department must be assigned for Department Managers." };
   }
 
   // Check for existing email
@@ -436,6 +454,16 @@ export async function createUser(formData: FormData) {
     }
   }
 
+  // For Group Managers, insert group managers groups join rows
+  if (role === "GROUP_MANAGER" && groupManagerGroupIds) {
+    const grpIds: string[] = JSON.parse(groupManagerGroupIds);
+    if (grpIds.length > 0) {
+      await db.insert(groupManagersGroups).values(
+        grpIds.map((gid) => ({ groupManagerId: newUser.id, groupId: gid }))
+      );
+    }
+  }
+
   // Send welcome email
   try {
     await sendWelcomeEmail({ to: email, name, email, temporaryPassword });
@@ -473,11 +501,12 @@ const updateUserSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   staffId: z.string().optional().nullable(),
-  role: z.enum(["SYSTEM_ADMIN", "HR", "GM", "DEPT_MANAGER"]),
+  role: z.enum(["SYSTEM_ADMIN", "HR", "GM", "DEPT_MANAGER", "GROUP_MANAGER"]),
   locationId: z.string().uuid().nullable(),
   departmentId: z.string().uuid().nullable(),
   hrLocationIds: z.string().optional().nullable(),
   gmLocationIds: z.string().optional().nullable(),
+  groupManagerGroupIds: z.string().optional().nullable(),
 });
 
 export async function updateUser(formData: FormData) {
@@ -497,6 +526,7 @@ export async function updateUser(formData: FormData) {
     departmentId: departmentIdVal && departmentIdVal !== "" ? (departmentIdVal as string) : null,
     hrLocationIds: formData.get("hrLocationIds") as string | null,
     gmLocationIds: formData.get("gmLocationIds") as string | null,
+    groupManagerGroupIds: formData.get("groupManagerGroupIds") as string | null,
   };
 
   const parsed = updateUserSchema.safeParse(raw);
@@ -504,12 +534,22 @@ export async function updateUser(formData: FormData) {
     return { error: "Please fill in all required fields correctly." };
   }
 
-  const { id, name, email, staffId, role, locationId, departmentId, hrLocationIds, gmLocationIds } =
-    parsed.data;
+  const {
+    id,
+    name,
+    email,
+    staffId,
+    role,
+    locationId,
+    departmentId,
+    hrLocationIds,
+    gmLocationIds,
+    groupManagerGroupIds,
+  } = parsed.data;
 
-  // Validate that if staffId is provided, departmentId is also provided
-  if (staffId && !departmentId) {
-    return { error: "A department must be assigned when specifying a Staff ID." };
+  // Validate department assignment
+  if (role === "DEPT_MANAGER" && !departmentId) {
+    return { error: "A department must be assigned for Department Managers." };
   }
 
   // Check if email already used by someone else
@@ -572,6 +612,17 @@ export async function updateUser(formData: FormData) {
     }
   }
 
+  // Sync Group Manager group mapping
+  await db.delete(groupManagersGroups).where(eq(groupManagersGroups.groupManagerId, id));
+  if (role === "GROUP_MANAGER" && groupManagerGroupIds) {
+    const grpIds: string[] = JSON.parse(groupManagerGroupIds);
+    if (grpIds.length > 0) {
+      await db.insert(groupManagersGroups).values(
+        grpIds.map((gid) => ({ groupManagerId: id, groupId: gid }))
+      );
+    }
+  }
+
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/staff");
   return { success: true };
@@ -610,4 +661,107 @@ export async function resendCredentials(userId: string) {
 
   revalidatePath("/dashboard/admin");
   return { success: true };
+}
+
+// ─── Groups ───────────────────────────────────────────────────────────────────
+
+export async function createGroup(formData: FormData) {
+  await assertAdmin();
+  const name = (formData.get("name") as string).trim();
+  let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+
+  if (!name) return { error: "Name is required." };
+
+  if (!code) {
+    code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (code.length > 10) code = code.substring(0, 10);
+    if (!code) code = "GRP-" + Math.floor(1000 + Math.random() * 9000);
+  }
+
+  // Verify unique group code
+  const existing = await db.query.groups.findFirst({
+    where: eq(groups.code, code),
+  });
+  if (existing) {
+    return { error: `Group code "${code}" is already in use.` };
+  }
+
+  await db.insert(groups).values({ name, code });
+  revalidatePath("/dashboard/admin");
+  return { success: true };
+}
+
+export async function updateGroup(formData: FormData) {
+  await assertAdmin();
+  const id = formData.get("id") as string;
+  const name = (formData.get("name") as string).trim();
+  let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+
+  if (!name || !id) return { error: "ID and Name are required." };
+
+  if (!code) {
+    code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (code.length > 10) code = code.substring(0, 10);
+    if (!code) code = "GRP-" + Math.floor(1000 + Math.random() * 9000);
+  }
+
+  // Verify uniqueness
+  const existing = await db.query.groups.findFirst({
+    where: and(eq(groups.code, code), not(eq(groups.id, id))),
+  });
+  if (existing) {
+    return { error: `Group code "${code}" is already in use.` };
+  }
+
+  await db.update(groups).set({ name, code }).where(eq(groups.id, id));
+  revalidatePath("/dashboard/admin");
+  return { success: true };
+}
+
+export async function toggleGroupActive(id: string, isActive: boolean) {
+  await assertAdmin();
+  await db.update(groups).set({ isActive }).where(eq(groups.id, id));
+  revalidatePath("/dashboard/admin");
+  return { success: true };
+}
+
+export async function bulkCreateGroups(
+  rows: { name: string; code?: string }[]
+) {
+  await assertAdmin();
+  if (rows.length === 0) return { error: "No groups to create." };
+
+  const allGrps = await db.select({ code: groups.code }).from(groups);
+  const existingCodes = new Set(allGrps.map((g) => g.code.toUpperCase()));
+
+  const toInsert: { name: string; code: string }[] = [];
+  const codesInPayload = new Set<string>();
+
+  for (let i = 0; i < rows.length; i++) {
+    const name = rows[i].name.trim();
+    let code = rows[i].code?.trim().toUpperCase() || "";
+
+    if (!name) continue; // Skip empty rows
+
+    if (!code) {
+      code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (code.length > 10) code = code.substring(0, 10);
+      if (!code) code = "GRP-" + Math.floor(1000 + Math.random() * 9000);
+    }
+
+    if (existingCodes.has(code) || codesInPayload.has(code)) {
+      return { error: `Group code "${code}" (Row ${i + 1}) is already in use.` };
+    }
+
+    codesInPayload.add(code);
+    toInsert.push({ name, code });
+  }
+
+  if (toInsert.length === 0) {
+    return { error: "Please enter details for at least one group." };
+  }
+
+  await db.insert(groups).values(toInsert).onConflictDoNothing({ target: groups.code });
+  revalidatePath("/dashboard/admin");
+  return { success: true, created: toInsert.length };
 }

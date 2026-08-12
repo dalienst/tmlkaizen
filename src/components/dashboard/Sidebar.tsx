@@ -47,6 +47,15 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { href: "/dashboard/core-values", label: "Core Values", icon: "★" },
     { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
   ],
+  GROUP_MANAGER: [
+    { href: "/dashboard/group-manager", label: "Overview", icon: "⊞" },
+    { href: "/dashboard/analytics", label: "Analytics", icon: "📊" },
+    { href: "/dashboard/departments", label: "Departments", icon: "🏢" },
+    { href: "/dashboard/staff", label: "Staff", icon: "👥" },
+    { href: "/dashboard/core-values", label: "Core Values", icon: "★" },
+    { href: "/dashboard/group-manager/projects", label: "All Projects", icon: "📋" },
+    { href: "/dashboard/settings", label: "Settings", icon: "⚙" },
+  ],
 };
 
 import { useSidebar } from "@/context/SidebarContext";
@@ -83,7 +92,13 @@ export function Sidebar() {
           <div className="sidebar-section-label">{ROLE_LABELS[role]}</div>
         )}
         {(() => {
-          const rootOnlyLinks = new Set(["/dashboard/admin", "/dashboard/hr", "/dashboard/gm", "/dashboard/manager"]);
+          const rootOnlyLinks = new Set([
+            "/dashboard/admin",
+            "/dashboard/hr",
+            "/dashboard/gm",
+            "/dashboard/manager",
+            "/dashboard/group-manager",
+          ]);
           return navItems.map((item) => {
             let isActive = false;
             if (item.href.includes("?")) {

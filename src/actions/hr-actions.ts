@@ -74,31 +74,74 @@ export async function bulkImportStaff(
   const allDepts = await db.select({ id: departments.id, code: departments.code }).from(departments);
   const codeMap = Object.fromEntries(allDepts.map((d) => [d.code.toUpperCase(), d.id]));
 
-  // Map input rows to database values
-  const toInsert = rows
-    .map((row) => {
-      const departmentId = codeMap[row.departmentCode.toUpperCase()];
-      if (!departmentId) return null;
-      return {
-        staffId: row.staffId,
-        name: row.name,
-        email: row.email,
-        departmentId,
-      };
-    })
-    .filter((x): x is NonNullable<typeof x> => x !== null);
+  // Fetch all existing staff to verify uniqueness
+  const existingStaff = await db.select({ staffId: staff.staffId, email: staff.email }).from(staff);
+  const existingStaffIds = new Set(existingStaff.map((s) => s.staffId.toUpperCase()));
+  const existingEmails = new Set(existingStaff.map((s) => s.email.toLowerCase()));
 
-  if (toInsert.length === 0) {
-    return { error: "No departments in the CSV matched any registered department codes." };
+  const toInsert: { staffId: string; name: string; email: string; departmentId: string }[] = [];
+  const processedStaffIds = new Set<string>();
+  const processedEmails = new Set<string>();
+
+  let skippedDuplicates = 0;
+  let skippedInvalidDepts = 0;
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const sId = row.staffId.trim();
+    const name = row.name.trim();
+    const email = row.email.trim();
+    const deptCode = row.departmentCode.trim().toUpperCase();
+
+    if (!sId || !name || !email || !deptCode) {
+      return { error: `Row ${i + 1} has empty values. Please fill in all columns.` };
+    }
+
+    const deptId = codeMap[deptCode];
+    if (!deptId) {
+      skippedInvalidDepts++;
+      continue;
+    }
+
+    const sIdUpper = sId.toUpperCase();
+    const emailLower = email.toLowerCase();
+
+    if (
+      existingStaffIds.has(sIdUpper) ||
+      processedStaffIds.has(sIdUpper) ||
+      existingEmails.has(emailLower) ||
+      processedEmails.has(emailLower)
+    ) {
+      skippedDuplicates++;
+      continue;
+    }
+
+    processedStaffIds.add(sIdUpper);
+    processedEmails.add(emailLower);
+
+    toInsert.push({
+      staffId: sId,
+      name,
+      email,
+      departmentId: deptId,
+    });
   }
 
-  // Insert ignoring duplicates using onConflictDoNothing
-  await db
-    .insert(staff)
-    .values(toInsert)
-    .onConflictDoNothing({ target: staff.staffId });
+  if (toInsert.length === 0) {
+    if (skippedInvalidDepts > 0) {
+      return { error: "Failed to import. The department codes entered do not exist in the system." };
+    }
+    return { error: "Failed to import. All rows contain duplicate IDs/emails already registered in the system." };
+  }
+
+  await db.insert(staff).values(toInsert);
 
   revalidatePath("/dashboard/hr");
   revalidatePath("/dashboard/staff");
-  return { imported: toInsert.length };
+
+  let summary = `Imported ${toInsert.length} staff member(s).`;
+  if (skippedDuplicates > 0 || skippedInvalidDepts > 0) {
+    summary += ` Skipped: ${skippedDuplicates} duplicate(s) and ${skippedInvalidDepts} invalid department code(s).`;
+  }
+  return { success: true, message: summary, imported: toInsert.length };
 }

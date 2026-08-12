@@ -19,6 +19,7 @@ export const userRoleEnum = pgEnum("user_role", [
   "HR",
   "GM",
   "DEPT_MANAGER",
+  "GROUP_MANAGER",
 ]);
 
 export const projectStatusEnum = pgEnum("project_status", [
@@ -39,6 +40,18 @@ export const locations = pgTable("locations", {
     .defaultNow(),
 }, (t) => [uniqueIndex("location_code_unique").on(t.code)]);
 
+// ─── Groups (crossed-location) ────────────────────────────────────────────────
+
+export const groups = pgTable("groups", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  code: varchar("code", { length: 100 }).notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+}, (t) => [uniqueIndex("group_code_unique").on(t.code)]);
+
 // ─── Departments ──────────────────────────────────────────────────────────────
 
 export const departments = pgTable("departments", {
@@ -48,6 +61,7 @@ export const departments = pgTable("departments", {
   locationId: uuid("location_id")
     .notNull()
     .references(() => locations.id, { onDelete: "restrict" }),
+  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -105,6 +119,21 @@ export const gmLocations = pgTable(
       .references(() => locations.id, { onDelete: "cascade" }),
   },
   (t) => [primaryKey({ columns: [t.gmUserId, t.locationId] })]
+);
+
+// ─── Group Managers ↔ Groups (many-to-many) ───────────────────────────────────
+
+export const groupManagersGroups = pgTable(
+  "group_managers_groups",
+  {
+    groupManagerId: uuid("group_manager_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    groupId: uuid("group_id")
+      .notNull()
+      .references(() => groups.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.groupManagerId, t.groupId] })]
 );
 
 // ─── Core Values ──────────────────────────────────────────────────────────────
@@ -179,6 +208,10 @@ export const departmentsRelations = relations(departments, ({ one, many }) => ({
     fields: [departments.locationId],
     references: [locations.id],
   }),
+  group: one(groups, {
+    fields: [departments.groupId],
+    references: [groups.id],
+  }),
   staff: many(staff),
   managerUsers: many(users),
   kaizenProjects: many(kaizenProjects),
@@ -195,6 +228,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   hrLocations: many(hrLocations),
   gmLocations: many(gmLocations),
+  groupManagersGroups: many(groupManagersGroups),
 }));
 
 export const hrLocationsRelations = relations(hrLocations, ({ one }) => ({
@@ -216,6 +250,22 @@ export const gmLocationsRelations = relations(gmLocations, ({ one }) => ({
   location: one(locations, {
     fields: [gmLocations.locationId],
     references: [locations.id],
+  }),
+}));
+
+export const groupsRelations = relations(groups, ({ many }) => ({
+  departments: many(departments),
+  groupManagersGroups: many(groupManagersGroups),
+}));
+
+export const groupManagersGroupsRelations = relations(groupManagersGroups, ({ one }) => ({
+  user: one(users, {
+    fields: [groupManagersGroups.groupManagerId],
+    references: [users.id],
+  }),
+  group: one(groups, {
+    fields: [groupManagersGroups.groupId],
+    references: [groups.id],
   }),
 }));
 
@@ -259,6 +309,10 @@ export type KaizenProject = typeof kaizenProjects.$inferSelect;
 export type NewKaizenProject = typeof kaizenProjects.$inferInsert;
 
 export type GmLocation = typeof gmLocations.$inferSelect;
+
+export type Group = typeof groups.$inferSelect;
+export type NewGroup = typeof groups.$inferInsert;
+export type GroupManagersGroup = typeof groupManagersGroups.$inferSelect;
 
 // ─── Password Reset Tokens ────────────────────────────────────────────────────
 

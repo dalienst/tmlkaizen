@@ -25,12 +25,17 @@ export default async function GMPage({
   const { loc } = await searchParams;
 
   // Load all GM locations
-  const gmLocs = await db
-    .select({ locationId: gmLocations.locationId })
-    .from(gmLocations)
-    .where(eq(gmLocations.gmUserId, userId));
-
-  const gmLocationIds = gmLocs.map((l) => l.locationId);
+  let gmLocationIds: string[] = [];
+  if (session.user.role === "SYSTEM_ADMIN") {
+    const allLocs = await db.select({ id: locations.id }).from(locations);
+    gmLocationIds = allLocs.map((l) => l.id);
+  } else {
+    const gmLocs = await db
+      .select({ locationId: gmLocations.locationId })
+      .from(gmLocations)
+      .where(eq(gmLocations.gmUserId, userId));
+    gmLocationIds = gmLocs.map((l) => l.locationId);
+  }
 
   if (gmLocationIds.length === 0) {
     return (

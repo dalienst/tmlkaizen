@@ -1,7 +1,16 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { db } from "@/db";
-import { locations, departments, users, coreValues, hrLocations, gmLocations } from "@/db/schema";
+import {
+  locations,
+  departments,
+  users,
+  coreValues,
+  hrLocations,
+  gmLocations,
+  groups,
+  groupManagersGroups,
+} from "@/db/schema";
 import { asc, desc } from "drizzle-orm";
 import AdminTabs from "./AdminTabs";
 
@@ -20,15 +29,25 @@ export default async function AdminPage({
   const resolvedParams = await searchParams;
   const defaultTab = resolvedParams.tab;
 
-  const [allLocations, allDepartments, allUsers, allCoreValues, allHRLocationsMapped, allGMLocationsMapped] =
-    await Promise.all([
-      db.select().from(locations).orderBy(asc(locations.name)),
-      db.select().from(departments).orderBy(asc(departments.name)),
-      db.select().from(users).orderBy(desc(users.createdAt)),
-      db.select().from(coreValues).orderBy(asc(coreValues.sortOrder)),
-      db.select().from(hrLocations),
-      db.select().from(gmLocations),
-    ]);
+  const [
+    allLocations,
+    allDepartments,
+    allUsers,
+    allCoreValues,
+    allHRLocationsMapped,
+    allGMLocationsMapped,
+    allGroups,
+    allGroupManagersGroupsMapped,
+  ] = await Promise.all([
+    db.select().from(locations).orderBy(asc(locations.name)),
+    db.select().from(departments).orderBy(asc(departments.name)),
+    db.select().from(users).orderBy(desc(users.createdAt)),
+    db.select().from(coreValues).orderBy(asc(coreValues.sortOrder)),
+    db.select().from(hrLocations),
+    db.select().from(gmLocations),
+    db.select().from(groups).orderBy(asc(groups.name)),
+    db.select().from(groupManagersGroups),
+  ]);
 
   return (
     <div className="dashboard-main">
@@ -45,6 +64,8 @@ export default async function AdminPage({
           coreValues={allCoreValues}
           hrLocationsMapped={allHRLocationsMapped}
           gmLocationsMapped={allGMLocationsMapped}
+          groups={allGroups}
+          groupManagersGroupsMapped={allGroupManagersGroupsMapped}
           defaultTab={defaultTab}
         />
       </div>

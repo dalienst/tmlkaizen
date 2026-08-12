@@ -9,6 +9,7 @@ import {
   coreValues,
   gmLocations,
   hrLocations,
+  groupManagersGroups,
 } from "@/db/schema";
 import { eq, inArray, desc } from "drizzle-orm";
 import { formatDate } from "@/lib/constants";
@@ -44,6 +45,13 @@ export default async function AnalyticsPage() {
     const locationIds = hrLocs.map((l) => l.locationId);
     const depts = locationIds.length > 0
       ? await db.select({ id: departments.id }).from(departments).where(inArray(departments.locationId, locationIds))
+      : [];
+    allowedDeptIds = depts.map((d) => d.id);
+  } else if (role === "GROUP_MANAGER") {
+    const mgrGroups = await db.select({ groupId: groupManagersGroups.groupId }).from(groupManagersGroups).where(eq(groupManagersGroups.groupManagerId, userId));
+    const groupIds = mgrGroups.map((g) => g.groupId);
+    const depts = groupIds.length > 0
+      ? await db.select({ id: departments.id }).from(departments).where(inArray(departments.groupId, groupIds))
       : [];
     allowedDeptIds = depts.map((d) => d.id);
   }
