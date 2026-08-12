@@ -6,15 +6,18 @@ import type {
   Department,
   User,
   CoreValue,
+  Group,
 } from "@/db/schema";
 import LocationsTab from "./tabs/LocationsTab";
 import DepartmentsTab from "./tabs/DepartmentsTab";
 import CoreValuesTab from "./tabs/CoreValuesTab";
 import UsersTab from "./tabs/UsersTab";
+import GroupsTab from "./tabs/GroupsTab";
 
 const TABS = [
   { id: "locations", label: "Locations" },
   { id: "departments", label: "Departments" },
+  { id: "groups", label: "Groups" },
   { id: "core-values", label: "Core Values" },
   { id: "users", label: "Users" },
 ] as const;
@@ -28,6 +31,8 @@ interface AdminTabsProps {
   coreValues: CoreValue[];
   hrLocationsMapped: { hrUserId: string; locationId: string }[];
   gmLocationsMapped: { gmUserId: string; locationId: string }[];
+  groups: Group[];
+  groupManagersGroupsMapped: { groupManagerId: string; groupId: string }[];
   defaultTab?: string;
 }
 
@@ -38,6 +43,8 @@ export default function AdminTabs({
   coreValues,
   hrLocationsMapped,
   gmLocationsMapped,
+  groups,
+  groupManagersGroupsMapped,
   defaultTab,
 }: AdminTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>(() => {
@@ -71,7 +78,14 @@ export default function AdminTabs({
         <LocationsTab locations={locations} />
       )}
       {activeTab === "departments" && (
-        <DepartmentsTab departments={departments} locations={locations} />
+        <DepartmentsTab
+          departments={departments}
+          locations={locations}
+          groups={groups}
+        />
+      )}
+      {activeTab === "groups" && (
+        <GroupsTab groups={groups} />
       )}
       {activeTab === "core-values" && (
         <CoreValuesTab coreValues={coreValues} />
@@ -81,8 +95,10 @@ export default function AdminTabs({
           users={users}
           locations={locations}
           departments={departments}
+          groups={groups}
           hrLocationsMapped={hrLocationsMapped}
           gmLocationsMapped={gmLocationsMapped}
+          groupManagersGroupsMapped={groupManagersGroupsMapped}
         />
       )}
     </div>

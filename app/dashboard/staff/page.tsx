@@ -7,6 +7,7 @@ import {
   locations,
   gmLocations,
   hrLocations,
+  groupManagersGroups,
   kaizenProjects,
 } from "@/db/schema";
 import { eq, inArray, count } from "drizzle-orm";
@@ -68,6 +69,21 @@ export default async function StaffPage() {
       );
     }
     const depts = await db.select({ id: departments.id }).from(departments).where(inArray(departments.locationId, locationIds));
+    allowedDeptIds = depts.map((d) => d.id);
+  } else if (role === "GROUP_MANAGER") {
+    const mgrGroups = await db.select({ groupId: groupManagersGroups.groupId }).from(groupManagersGroups).where(eq(groupManagersGroups.groupManagerId, userId));
+    const groupIds = mgrGroups.map((g) => g.groupId);
+    if (groupIds.length === 0) {
+      return (
+        <div className="dashboard-main">
+          <div className="dashboard-header"><h1 className="font-semibold" style={{ fontSize: "1rem" }}>Staff</h1></div>
+          <div className="dashboard-content">
+            <div className="alert alert-warning">Your account is not assigned to any group.</div>
+          </div>
+        </div>
+      );
+    }
+    const depts = await db.select({ id: departments.id }).from(departments).where(inArray(departments.groupId, groupIds));
     allowedDeptIds = depts.map((d) => d.id);
   }
   // SYSTEM_ADMIN: allowedDeptIds stays null = show all

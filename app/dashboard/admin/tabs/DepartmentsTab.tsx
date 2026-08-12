@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { Department, Location } from "@/db/schema";
+import type { Department, Location, Group } from "@/db/schema";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import {
@@ -15,11 +15,13 @@ import { toast } from "react-hot-toast";
 interface DepartmentsTabProps {
   departments: Department[];
   locations: Location[];
+  groups: Group[];
 }
 
 export default function DepartmentsTab({
   departments,
   locations,
+  groups,
 }: DepartmentsTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Department | null>(null);
@@ -27,16 +29,16 @@ export default function DepartmentsTab({
   const [isPending, startTransition] = useTransition();
 
   const [isBulkOpen, setBulkOpen] = useState(false);
-  const [bulkRows, setBulkRows] = useState<{ name: string; code: string; locationId: string }[]>([
-    { name: "", code: "", locationId: "" },
-    { name: "", code: "", locationId: "" },
-    { name: "", code: "", locationId: "" },
+  const [bulkRows, setBulkRows] = useState<{ name: string; code: string; locationId: string; groupId: string }[]>([
+    { name: "", code: "", locationId: "", groupId: "" },
+    { name: "", code: "", locationId: "", groupId: "" },
+    { name: "", code: "", locationId: "", groupId: "" },
   ]);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   function addBulkRow() {
     if (bulkRows.length >= 50) return;
-    setBulkRows((prev) => [...prev, { name: "", code: "", locationId: "" }]);
+    setBulkRows((prev) => [...prev, { name: "", code: "", locationId: "", groupId: "" }]);
   }
 
   function removeBulkRow(idx: number) {
@@ -44,7 +46,7 @@ export default function DepartmentsTab({
     setBulkRows((prev) => prev.filter((_, i) => i !== idx));
   }
 
-  function updateBulkRow(idx: number, field: "name" | "code" | "locationId", val: string) {
+  function updateBulkRow(idx: number, field: "name" | "code" | "locationId" | "groupId", val: string) {
     setBulkRows((prev) =>
       prev.map((row, i) => (i === idx ? { ...row, [field]: val } : row))
     );
@@ -68,9 +70,9 @@ export default function DepartmentsTab({
       } else {
         setBulkOpen(false);
         setBulkRows([
-          { name: "", code: "", locationId: "" },
-          { name: "", code: "", locationId: "" },
-          { name: "", code: "", locationId: "" },
+          { name: "", code: "", locationId: "", groupId: "" },
+          { name: "", code: "", locationId: "", groupId: "" },
+          { name: "", code: "", locationId: "", groupId: "" },
         ]);
         toast.success(`Departments created successfully.`);
       }
@@ -156,6 +158,7 @@ export default function DepartmentsTab({
               <th>Name</th>
               <th>Code</th>
               <th>Location</th>
+              <th>Group</th>
               <th>Status</th>
               <th style={{ width: "8rem" }}>Actions</th>
             </tr>
@@ -163,27 +166,30 @@ export default function DepartmentsTab({
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>
+                <td colSpan={6} style={{ textAlign: "center", color: "var(--color-text-muted)", padding: "2rem" }}>
                   No departments found.
                 </td>
               </tr>
             )}
-            {filtered.map((dept) => (
-              <tr
-                key={dept.id}
-                onClick={() => setEditTarget(dept)}
-                style={{ cursor: "pointer" }}
-              >
-                <td className="font-medium">{dept.name}</td>
-                <td><code style={{ fontSize: "0.8125rem" }}>{dept.code}</code></td>
-                <td className="text-sub">{locationName(dept.locationId)}</td>
-                <td>
-                  <span
-                    className={`badge ${dept.isActive ? "badge-completed" : "badge-neutral"}`}
-                  >
-                    {dept.isActive ? "Active" : "Inactive"}
-                  </span>
-                </td>
+            {filtered.map((dept) => {
+              const grp = groups.find((g) => g.id === dept.groupId);
+              return (
+                <tr
+                  key={dept.id}
+                  onClick={() => setEditTarget(dept)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td className="font-medium">{dept.name}</td>
+                  <td><code style={{ fontSize: "0.8125rem" }}>{dept.code}</code></td>
+                  <td className="text-sub">{locationName(dept.locationId)}</td>
+                  <td className="text-sub">{grp?.name ?? "—"}</td>
+                  <td>
+                    <span
+                      className={`badge ${dept.isActive ? "badge-completed" : "badge-neutral"}`}
+                    >
+                      {dept.isActive ? "Active" : "Inactive"}
+                    </span>
+                  </td>
                 <td onClick={(e) => e.stopPropagation()}>
                   <div className="flex gap-2">
                     <Button size="sm" variant="ghost" onClick={() => setEditTarget(dept)}>
@@ -200,7 +206,8 @@ export default function DepartmentsTab({
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -236,6 +243,15 @@ export default function DepartmentsTab({
               <option value="">Select location…</option>
               {locations.filter((l) => l.isActive).map((l) => (
                 <option key={l.id} value={l.id}>{l.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="dept-group">Group <span className="text-muted">(optional)</span></label>
+            <select id="dept-group" name="groupId">
+              <option value="">No Group</option>
+              {groups.filter((g) => g.isActive).map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
               ))}
             </select>
           </div>
@@ -277,6 +293,15 @@ export default function DepartmentsTab({
               <label htmlFor="dept-edit-code">Department code</label>
               <input id="dept-edit-code" name="code" type="text" defaultValue={editTarget.code} required style={{ textTransform: "uppercase" }} />
             </div>
+            <div className="field">
+              <label htmlFor="dept-edit-group">Group <span className="text-muted">(optional)</span></label>
+              <select id="dept-edit-group" name="groupId" defaultValue={editTarget.groupId ?? ""}>
+                <option value="">No Group</option>
+                {groups.filter((g) => g.isActive).map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
           </form>
         )}
       </Modal>
@@ -305,8 +330,9 @@ export default function DepartmentsTab({
           <div style={{ maxHeight: "24rem", overflowY: "auto", paddingRight: "0.5rem" }}>
             <div className="flex gap-2 font-semibold text-xs text-sub mb-2" style={{ paddingRight: "2rem" }}>
               <div style={{ flex: 2 }}>Department Name *</div>
-              <div style={{ flex: 1.5 }}>Department Code (optional, e.g. FIN)</div>
-              <div style={{ flex: 2 }}>Location *</div>
+              <div style={{ flex: 1.2 }}>Code (optional, e.g. FIN)</div>
+              <div style={{ flex: 1.8 }}>Location *</div>
+              <div style={{ flex: 1.8 }}>Group (optional)</div>
             </div>
 
             {bulkRows.map((row, idx) => (
@@ -324,17 +350,27 @@ export default function DepartmentsTab({
                   placeholder="e.g. FIN"
                   value={row.code}
                   onChange={(e) => updateBulkRow(idx, "code", e.target.value)}
-                  style={{ flex: 1.5, padding: "0.375rem 0.5rem", textTransform: "uppercase" }}
+                  style={{ flex: 1.2, padding: "0.375rem 0.5rem", textTransform: "uppercase" }}
                 />
                 <select
                   value={row.locationId}
                   onChange={(e) => updateBulkRow(idx, "locationId", e.target.value)}
                   required={idx === 0}
-                  style={{ flex: 2, padding: "0.375rem 0.5rem" }}
+                  style={{ flex: 1.8, padding: "0.375rem 0.5rem" }}
                 >
                   <option value="">Select location…</option>
                   {locations.filter((l) => l.isActive).map((l) => (
                     <option key={l.id} value={l.id}>{l.name}</option>
+                  ))}
+                </select>
+                <select
+                  value={row.groupId}
+                  onChange={(e) => updateBulkRow(idx, "groupId", e.target.value)}
+                  style={{ flex: 1.8, padding: "0.375rem 0.5rem" }}
+                >
+                  <option value="">No Group</option>
+                  {groups.filter((g) => g.isActive).map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
                 </select>
                 <div style={{ width: "2rem", display: "flex", justifyContent: "center" }}>

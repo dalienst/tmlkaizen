@@ -8,6 +8,7 @@ import {
   kaizenProjects,
   gmLocations,
   hrLocations,
+  groupManagersGroups,
 } from "@/db/schema";
 import { eq, inArray, count } from "drizzle-orm";
 import DepartmentsDashboardClient from "./DepartmentsDashboardClient";
@@ -44,6 +45,14 @@ export default async function DepartmentsPage() {
       ? await db.select({ id: departments.id }).from(departments).where(inArray(departments.locationId, locationIds))
       : [];
     allowedDeptIds = depts.map((d) => d.id);
+  } else if (role === "GROUP_MANAGER") {
+    const mgrGroups = await db.select({ groupId: groupManagersGroups.groupId }).from(groupManagersGroups).where(eq(groupManagersGroups.groupManagerId, userId));
+    const groupIds = mgrGroups.map((g) => g.groupId);
+    const depts = groupIds.length > 0
+      ? await db.select({ id: departments.id, locationId: departments.locationId }).from(departments).where(inArray(departments.groupId, groupIds))
+      : [];
+    allowedDeptIds = depts.map((d) => d.id);
+    assignedLocationIds = depts.map((d) => d.locationId);
   } else if (role === "SYSTEM_ADMIN") {
     const allLocs = await db.select({ id: locations.id }).from(locations);
     assignedLocationIds = allLocs.map((l) => l.id);

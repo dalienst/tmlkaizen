@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { User, Location, Department } from "@/db/schema";
+import type { User, Location, Department, Group } from "@/db/schema";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { createUser, updateUser, toggleUserActive, resendCredentials } from "@/actions/admin-actions";
@@ -13,16 +13,20 @@ interface UsersTabProps {
   users: User[];
   locations: Location[];
   departments: Department[];
+  groups: Group[];
   hrLocationsMapped: { hrUserId: string; locationId: string }[];
   gmLocationsMapped: { gmUserId: string; locationId: string }[];
+  groupManagersGroupsMapped: { groupManagerId: string; groupId: string }[];
 }
 
 export default function UsersTab({
   users,
   locations,
   departments,
+  groups,
   hrLocationsMapped,
   gmLocationsMapped,
+  groupManagersGroupsMapped,
 }: UsersTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("HR");
@@ -34,18 +38,20 @@ export default function UsersTab({
 
   const [selectedHRLocations, setSelectedHRLocations] = useState<string[]>([]);
   const [selectedGMLocations, setSelectedGMLocations] = useState<string[]>([]);
+  const [selectedGroupManagerGroups, setSelectedGroupManagerGroups] = useState<string[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
 
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [editRole, setEditRole] = useState<string>("HR");
   const [editHRLocations, setEditHRLocations] = useState<string[]>([]);
   const [editGMLocations, setEditGMLocations] = useState<string[]>([]);
+  const [editGroupManagerGroups, setEditGroupManagerGroups] = useState<string[]>([]);
   const [editError, setEditError] = useState<string | null>(null);
 
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // ── HR / GM Locations Checklist Toggles ─────────────────────────────────────
+  // ── HR / GM / Group Manager Checklist Toggles ───────────────────────────────
   function toggleHRLocation(id: string) {
     setSelectedHRLocations((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
@@ -54,6 +60,11 @@ export default function UsersTab({
   function toggleGMLocation(id: string) {
     setSelectedGMLocations((prev) =>
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
+    );
+  }
+  function toggleGroupManagerGroup(id: string) {
+    setSelectedGroupManagerGroups((prev) =>
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
     );
   }
   function toggleEditHRLocation(id: string) {
@@ -66,6 +77,11 @@ export default function UsersTab({
       prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
     );
   }
+  function toggleEditGroupManagerGroup(id: string) {
+    setEditGroupManagerGroups((prev) =>
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+    );
+  }
 
   // ── Actions ──────────────────────────────────────────────────────────────────
   async function handleCreate(fd: FormData) {
@@ -75,6 +91,9 @@ export default function UsersTab({
     }
     if (selectedRole === "GM") {
       fd.set("gmLocationIds", JSON.stringify(selectedGMLocations));
+    }
+    if (selectedRole === "GROUP_MANAGER") {
+      fd.set("groupManagerGroupIds", JSON.stringify(selectedGroupManagerGroups));
     }
     startTransition(async () => {
       const result = await createUser(fd);
@@ -86,6 +105,7 @@ export default function UsersTab({
         setSelectedRole("HR");
         setSelectedHRLocations([]);
         setSelectedGMLocations([]);
+        setSelectedGroupManagerGroups([]);
         toast.success("User created successfully!");
       }
     });
@@ -98,6 +118,9 @@ export default function UsersTab({
     }
     if (editRole === "GM") {
       fd.set("gmLocationIds", JSON.stringify(editGMLocations));
+    }
+    if (editRole === "GROUP_MANAGER") {
+      fd.set("groupManagerGroupIds", JSON.stringify(editGroupManagerGroups));
     }
     startTransition(async () => {
       const result = await updateUser(fd);
@@ -142,6 +165,10 @@ export default function UsersTab({
       .filter((gl) => gl.gmUserId === u.id)
       .map((gl) => gl.locationId);
     setEditGMLocations(selectedGM);
+    const selectedGroups = groupManagersGroupsMapped
+      .filter((gg) => gg.groupManagerId === u.id)
+      .map((gg) => gg.groupId);
+    setEditGroupManagerGroups(selectedGroups);
     setEditError(null);
   }
 
@@ -281,13 +308,19 @@ export default function UsersTab({
               id="user-role"
               name="role"
               value={selectedRole}
-              onChange={(e) => { setSelectedRole(e.target.value); setSelectedHRLocations([]); }}
+              onChange={(e) => {
+                setSelectedRole(e.target.value);
+                setSelectedHRLocations([]);
+                setSelectedGMLocations([]);
+                setSelectedGroupManagerGroups([]);
+              }}
               required
             >
               <option value="SYSTEM_ADMIN">System Admin</option>
               <option value="HR">HR</option>
               <option value="GM">General Manager</option>
               <option value="DEPT_MANAGER">Department Manager</option>
+              <option value="GROUP_MANAGER">Group Manager</option>
             </select>
           </div>
 
@@ -315,10 +348,36 @@ export default function UsersTab({
             </div>
           )}
 
+          {/* Group Manager multi-group checkboxes */}
+          {selectedRole === "GROUP_MANAGER" && (
+            <div className="field">
+              <label>Assigned groups <span className="text-muted">(select all that apply)</span></label>
+              <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                {groups.filter((g) => g.isActive).map((g) => (
+                  <label
+                    key={g.id}
+                    className={`checkbox-chip${selectedGroupManagerGroups.includes(g.id) ? " selected" : ""}`}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <input
+                      type="checkbox"
+                      style={{ display: "none" }}
+                      checked={selectedGroupManagerGroups.includes(g.id)}
+                      onChange={() => toggleGroupManagerGroup(g.id)}
+                    />
+                    {g.name} ({g.code})
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="field">
             <label htmlFor="user-department">
               {selectedRole === "DEPT_MANAGER" ? "Assigned department" : "Home department (for staff roster)"}{" "}
-              {selectedRole !== "DEPT_MANAGER" && <span className="text-muted">(required if Staff ID is entered)</span>}
+              {selectedRole !== "DEPT_MANAGER" && selectedRole !== "GM" && selectedRole !== "HR" && selectedRole !== "GROUP_MANAGER" && (
+                <span className="text-muted">(required if Staff ID is entered)</span>
+              )}
             </label>
             <select id="user-department" name="departmentId" required={selectedRole === "DEPT_MANAGER"}>
               <option value="">Select department…</option>
@@ -413,13 +472,19 @@ export default function UsersTab({
                 id="edit-user-role"
                 name="role"
                 value={editRole}
-                onChange={(e) => { setEditRole(e.target.value); setEditHRLocations([]); }}
+                onChange={(e) => {
+                  setEditRole(e.target.value);
+                  setEditHRLocations([]);
+                  setEditGMLocations([]);
+                  setEditGroupManagerGroups([]);
+                }}
                 required
               >
                 <option value="SYSTEM_ADMIN">System Admin</option>
                 <option value="HR">HR</option>
                 <option value="GM">General Manager</option>
                 <option value="DEPT_MANAGER">Department Manager</option>
+                <option value="GROUP_MANAGER">Group Manager</option>
               </select>
             </div>
 
@@ -446,10 +511,36 @@ export default function UsersTab({
               </div>
             )}
 
+            {/* Group Manager multi-group checkboxes */}
+            {editRole === "GROUP_MANAGER" && (
+              <div className="field">
+                <label>Assigned groups <span className="text-muted">(select all that apply)</span></label>
+                <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                  {groups.filter((g) => g.isActive).map((g) => (
+                    <label
+                      key={g.id}
+                      className={`checkbox-chip${editGroupManagerGroups.includes(g.id) ? " selected" : ""}`}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        style={{ display: "none" }}
+                        checked={editGroupManagerGroups.includes(g.id)}
+                        onChange={() => toggleEditGroupManagerGroup(g.id)}
+                      />
+                      {g.name} ({g.code})
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="field">
               <label htmlFor="edit-user-department">
                 {editRole === "DEPT_MANAGER" ? "Assigned department" : "Home department (for staff roster)"}{" "}
-                {editRole !== "DEPT_MANAGER" && <span className="text-muted">(required if Staff ID is entered)</span>}
+                {editRole !== "DEPT_MANAGER" && editRole !== "GM" && editRole !== "HR" && editRole !== "GROUP_MANAGER" && (
+                  <span className="text-muted">(required if Staff ID is entered)</span>
+                )}
               </label>
               <select id="edit-user-department" name="departmentId" defaultValue={editTarget.departmentId ?? ""} required={editRole === "DEPT_MANAGER"}>
                 <option value="">Select department…</option>
@@ -467,7 +558,7 @@ export default function UsersTab({
                     <label
                       key={l.id}
                       className={`checkbox-chip${editHRLocations.includes(l.id) ? " selected" : ""}`}
-                      style={{ cursor: "pointer`" }}
+                      style={{ cursor: "pointer" }}
                     >
                       <input
                         type="checkbox"

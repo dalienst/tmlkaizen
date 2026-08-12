@@ -176,7 +176,7 @@ export default function HRDashboardClient({
         setCsvError(result.error);
         toast.error(result.error);
       } else {
-        const msg = `${result?.imported ?? rows.length} staff member(s) imported.`;
+        const msg = result.message || `Imported ${result.imported ?? rows.length} staff member(s).`;
         setCsvSuccess(msg);
         toast.success(msg);
       }
@@ -191,26 +191,35 @@ export default function HRDashboardClient({
     <div>
       {/* CSV section */}
       <div className="card p-4 mb-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div style={{ flex: 1, minWidth: "18rem" }}>
             <div className="font-semibold" style={{ fontSize: "0.875rem" }}>Bulk Import via CSV</div>
             <div className="text-sub" style={{ fontSize: "0.8125rem", marginTop: "0.25rem" }}>
-              CSV format: <code style={{ fontSize: "0.75rem", background: "var(--color-muted)", padding: "1px 4px", borderRadius: "3px" }}>staffId, name, email, departmentCode</code>
+              Upload a <code>.csv</code> file to import multiple staff members at once.
             </div>
-            <div className="text-muted" style={{ fontSize: "0.75rem", marginTop: "0.25rem" }}>
-              Note: The CSV file must include a header row. The <code>departmentCode</code> column must contain a valid, registered department code (e.g. <code>IT</code> or <code>HR</code>).
+            <div className="text-muted" style={{ fontSize: "0.75rem", marginTop: "0.375rem" }}>
+              Note: The CSV file must include the exact header row shown in the template. The <code>departmentCode</code> must contain a valid, registered department code (e.g. <code>IT</code> or <code>HR</code>). Duplicate Staff IDs will be automatically skipped.
             </div>
           </div>
-          <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>
-            Upload CSV
-            <input
-              ref={csvInputRef}
-              type="file"
-              accept=".csv"
-              style={{ display: "none" }}
-              onChange={handleCSV}
-            />
-          </label>
+          <div style={{ minWidth: "15rem" }}>
+            <div className="text-xs text-sub font-mono p-2.5 mb-2" style={{ backgroundColor: "var(--color-muted)", borderRadius: "4px", whiteSpace: "pre", border: "1px solid var(--color-border)" }}>
+{`staffId,name,email,departmentCode
+EMP001,Jane Doe,jane@company.com,IT
+EMP002,John Smith,john@company.com,HR`}
+            </div>
+            <div className="flex justify-end">
+              <label className="btn btn-secondary btn-sm" style={{ cursor: "pointer" }}>
+                Upload CSV
+                <input
+                  ref={csvInputRef}
+                  type="file"
+                  accept=".csv"
+                  style={{ display: "none" }}
+                  onChange={handleCSV}
+                />
+              </label>
+            </div>
+          </div>
         </div>
         {csvError && <div className="alert alert-error mt-2">{csvError}</div>}
         {csvSuccess && <div className="alert alert-success mt-2">{csvSuccess}</div>}

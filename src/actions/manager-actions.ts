@@ -1,8 +1,15 @@
 "use server";
 
 import { db } from "@/db";
-import { kaizenProjects, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import {
+  kaizenProjects,
+  users,
+  groupManagersGroups,
+  departments,
+  gmLocations,
+  hrLocations,
+} from "@/db/schema";
+import { eq, and } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { syncUserToStaff } from "./admin-actions";
 import { auth } from "@/auth";
@@ -10,7 +17,7 @@ import type { ProjectStatus } from "@/lib/constants";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
-const ALLOWED_STATUS_ROLES = ["DEPT_MANAGER", "SYSTEM_ADMIN", "GM", "HR"] as const;
+const ALLOWED_STATUS_ROLES = ["DEPT_MANAGER", "SYSTEM_ADMIN", "GM", "HR", "GROUP_MANAGER"] as const;
 type AllowedRole = (typeof ALLOWED_STATUS_ROLES)[number];
 
 export async function updateProjectStatus(projectId: string, newStatus: ProjectStatus) {
@@ -25,12 +32,42 @@ export async function updateProjectStatus(projectId: string, newStatus: ProjectS
 
   if (!project) throw new Error("Project not found");
 
+  const role = session.user.role;
+  const userId = session.user.id;
+
   // DEPT_MANAGER can only update projects in their own department
-  if (
-    session.user.role === "DEPT_MANAGER" &&
-    project.departmentId !== session.user.departmentId
-  ) {
-    throw new Error("Unauthorized: project belongs to a different department");
+  if (role === "DEPT_MANAGER" && project.departmentId !== session.user.departmentId) {
+    throw new Error("Unauthorized");
+  }
+
+  // GM can only update projects in their managed locations
+  if (role === "GM") {
+    const gmLocs = await db.select({ locationId: gmLocations.locationId }).from(gmLocations).where(eq(gmLocations.gmUserId, userId));
+    const locationIds = gmLocs.map((gl) => gl.locationId);
+    const dept = await db.query.departments.findFirst({ where: eq(departments.id, project.departmentId) });
+    if (!dept || !locationIds.includes(dept.locationId)) {
+      throw new Error("Unauthorized");
+    }
+  }
+
+  // HR can only update projects in their managed locations
+  if (role === "HR") {
+    const hrLocs = await db.select({ locationId: hrLocations.locationId }).from(hrLocations).where(eq(hrLocations.hrUserId, userId));
+    const locationIds = hrLocs.map((hl) => hl.locationId);
+    const dept = await db.query.departments.findFirst({ where: eq(departments.id, project.departmentId) });
+    if (!dept || !locationIds.includes(dept.locationId)) {
+      throw new Error("Unauthorized");
+    }
+  }
+
+  // GROUP_MANAGER can only update projects in their managed groups
+  if (role === "GROUP_MANAGER") {
+    const mgrGroups = await db.select({ groupId: groupManagersGroups.groupId }).from(groupManagersGroups).where(eq(groupManagersGroups.groupManagerId, userId));
+    const groupIds = mgrGroups.map((mg) => mg.groupId);
+    const dept = await db.query.departments.findFirst({ where: eq(departments.id, project.departmentId) });
+    if (!dept || !dept.groupId || !groupIds.includes(dept.groupId)) {
+      throw new Error("Unauthorized");
+    }
   }
 
   await db
@@ -40,6 +77,7 @@ export async function updateProjectStatus(projectId: string, newStatus: ProjectS
 
   revalidatePath("/dashboard/manager");
   revalidatePath("/dashboard/gm");
+  revalidatePath("/dashboard/group-manager");
   revalidatePath(`/dashboard/projects/${projectId}`);
 }
 
