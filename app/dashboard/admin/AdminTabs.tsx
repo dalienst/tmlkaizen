@@ -85,7 +85,12 @@ export default function AdminTabs({
         />
       )}
       {activeTab === "groups" && (
-        <GroupsTab groups={groups} />
+        <GroupsTab
+          groups={groups}
+          departments={departments}
+          users={users}
+          groupManagersGroupsMapped={groupManagersGroupsMapped}
+        />
       )}
       {activeTab === "core-values" && (
         <CoreValuesTab coreValues={coreValues} />

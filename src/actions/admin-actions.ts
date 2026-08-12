@@ -12,7 +12,7 @@ import {
   groups,
   groupManagersGroups,
 } from "@/db/schema";
-import { eq, and, not } from "drizzle-orm";
+import { eq, and, not, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import bcrypt from "bcryptjs";
@@ -669,6 +669,8 @@ export async function createGroup(formData: FormData) {
   await assertAdmin();
   const name = (formData.get("name") as string).trim();
   let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+  const deptsJson = formData.get("assignedDepartmentIds") as string | null;
+  const managersJson = formData.get("assignedManagerIds") as string | null;
 
   if (!name) return { error: "Name is required." };
 
@@ -686,8 +688,34 @@ export async function createGroup(formData: FormData) {
     return { error: `Group code "${code}" is already in use.` };
   }
 
-  await db.insert(groups).values({ name, code });
+  const [newGroup] = await db
+    .insert(groups)
+    .values({ name, code })
+    .returning({ id: groups.id });
+
+  // Handle department allocations
+  if (deptsJson) {
+    const deptIds: string[] = JSON.parse(deptsJson);
+    if (deptIds.length > 0) {
+      await db
+        .update(departments)
+        .set({ groupId: newGroup.id })
+        .where(inArray(departments.id, deptIds));
+    }
+  }
+
+  // Handle Group Manager allocations
+  if (managersJson) {
+    const managerIds: string[] = JSON.parse(managersJson);
+    if (managerIds.length > 0) {
+      await db.insert(groupManagersGroups).values(
+        managerIds.map((mid) => ({ groupManagerId: mid, groupId: newGroup.id }))
+      );
+    }
+  }
+
   revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/departments");
   return { success: true };
 }
 
@@ -696,6 +724,8 @@ export async function updateGroup(formData: FormData) {
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string).trim();
   let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
+  const deptsJson = formData.get("assignedDepartmentIds") as string | null;
+  const managersJson = formData.get("assignedManagerIds") as string | null;
 
   if (!name || !id) return { error: "ID and Name are required." };
 
@@ -714,7 +744,39 @@ export async function updateGroup(formData: FormData) {
   }
 
   await db.update(groups).set({ name, code }).where(eq(groups.id, id));
+
+  // Sync departments: unset previous, then set new
+  await db
+    .update(departments)
+    .set({ groupId: null })
+    .where(eq(departments.groupId, id));
+
+  if (deptsJson) {
+    const deptIds: string[] = JSON.parse(deptsJson);
+    if (deptIds.length > 0) {
+      await db
+        .update(departments)
+        .set({ groupId: id })
+        .where(inArray(departments.id, deptIds));
+    }
+  }
+
+  // Sync Group Managers: delete previous, insert new
+  await db
+    .delete(groupManagersGroups)
+    .where(eq(groupManagersGroups.groupId, id));
+
+  if (managersJson) {
+    const managerIds: string[] = JSON.parse(managersJson);
+    if (managerIds.length > 0) {
+      await db.insert(groupManagersGroups).values(
+        managerIds.map((mid) => ({ groupManagerId: mid, groupId: id }))
+      );
+    }
+  }
+
   revalidatePath("/dashboard/admin");
+  revalidatePath("/dashboard/departments");
   return { success: true };
 }
 

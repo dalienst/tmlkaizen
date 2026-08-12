@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { Group } from "@/db/schema";
+import type { Group, Department, User } from "@/db/schema";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import {
@@ -15,12 +15,28 @@ import { toast } from "react-hot-toast";
 
 interface GroupsTabProps {
   groups: Group[];
+  departments: Department[];
+  users: User[];
+  groupManagersGroupsMapped: { groupManagerId: string; groupId: string }[];
 }
 
-export default function GroupsTab({ groups }: GroupsTabProps) {
+export default function GroupsTab({
+  groups,
+  departments,
+  users,
+  groupManagersGroupsMapped,
+}: GroupsTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Group | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
+  const [selectedManagers, setSelectedManagers] = useState<string[]>([]);
+
+  const [editDepartments, setEditDepartments] = useState<string[]>([]);
+  const [editManagers, setEditManagers] = useState<string[]>([]);
+
+  const groupManagers = users.filter((u) => u.role === "GROUP_MANAGER");
 
   const [isBulkOpen, setBulkOpen] = useState(false);
   const [bulkRows, setBulkRows] = useState<{ name: string; code: string }[]>([
@@ -80,25 +96,65 @@ export default function GroupsTab({ groups }: GroupsTabProps) {
     });
   }
 
+  // ── Checklist Toggles ────────────────────────────────────────────────────────
+  function toggleDepartment(id: string) {
+    setSelectedDepartments((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  }
+  function toggleManager(id: string) {
+    setSelectedManagers((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
+    );
+  }
+  function toggleEditDepartment(id: string) {
+    setEditDepartments((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  }
+  function toggleEditManager(id: string) {
+    setEditManagers((prev) =>
+      prev.includes(id) ? prev.filter((m) => m !== id) : [...prev, id]
+    );
+  }
+
+  function openEditModal(grp: Group) {
+    setEditTarget(grp);
+    const depts = departments.filter((d) => d.groupId === grp.id).map((d) => d.id);
+    setEditDepartments(depts);
+    const managers = groupManagersGroupsMapped
+      .filter((gg) => gg.groupId === grp.id)
+      .map((gg) => gg.groupManagerId);
+    setEditManagers(managers);
+  }
+
   async function handleCreate(fd: FormData) {
+    fd.set("assignedDepartmentIds", JSON.stringify(selectedDepartments));
+    fd.set("assignedManagerIds", JSON.stringify(selectedManagers));
     startTransition(async () => {
       const res = await createGroup(fd);
       if (res?.error) {
         toast.error(res.error);
       } else {
         setCreateOpen(false);
+        setSelectedDepartments([]);
+        setSelectedManagers([]);
         toast.success("Group created successfully.");
       }
     });
   }
 
   async function handleEdit(fd: FormData) {
+    fd.set("assignedDepartmentIds", JSON.stringify(editDepartments));
+    fd.set("assignedManagerIds", JSON.stringify(editManagers));
     startTransition(async () => {
       const res = await updateGroup(fd);
       if (res?.error) {
         toast.error(res.error);
       } else {
         setEditTarget(null);
+        setEditDepartments([]);
+        setEditManagers([]);
         toast.success("Group updated successfully.");
       }
     });
@@ -156,7 +212,7 @@ export default function GroupsTab({ groups }: GroupsTabProps) {
                 <td className="text-sub">{formatDate(grp.createdAt)}</td>
                 <td>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="ghost" onClick={() => setEditTarget(grp)}>
+                    <Button size="sm" variant="ghost" onClick={() => openEditModal(grp)}>
                       Edit
                     </Button>
                     <Button
@@ -200,6 +256,47 @@ export default function GroupsTab({ groups }: GroupsTabProps) {
             <label htmlFor="grp-code">Group code <span className="text-muted">(optional, e.g. GRP-KIT)</span></label>
             <input id="grp-code" name="code" type="text" placeholder="Auto-generated if left blank" style={{ textTransform: "uppercase" }} />
           </div>
+          <div className="field">
+            <label>Allocate Departments <span className="text-muted">(select all that apply)</span></label>
+            <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+              {departments.filter((d) => d.isActive).map((d) => (
+                <label
+                  key={d.id}
+                  className={`checkbox-chip${selectedDepartments.includes(d.id) ? " selected" : ""}`}
+                  style={{ cursor: "pointer" }}
+                >
+                  <input
+                    type="checkbox"
+                    style={{ display: "none" }}
+                    checked={selectedDepartments.includes(d.id)}
+                    onChange={() => toggleDepartment(d.id)}
+                  />
+                  {d.name}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="field">
+            <label>Allocate Group Managers <span className="text-muted">(select all that apply)</span></label>
+            <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+              {groupManagers.map((m) => (
+                <label
+                  key={m.id}
+                  className={`checkbox-chip${selectedManagers.includes(m.id) ? " selected" : ""}`}
+                  style={{ cursor: "pointer" }}
+                >
+                  <input
+                    type="checkbox"
+                    style={{ display: "none" }}
+                    checked={selectedManagers.includes(m.id)}
+                    onChange={() => toggleManager(m.id)}
+                  />
+                  {m.name}
+                </label>
+              ))}
+            </div>
+          </div>
         </form>
       </Modal>
 
@@ -229,6 +326,47 @@ export default function GroupsTab({ groups }: GroupsTabProps) {
             <div className="field">
               <label htmlFor="grp-edit-code">Group code</label>
               <input id="grp-edit-code" name="code" type="text" defaultValue={editTarget.code} required style={{ textTransform: "uppercase" }} />
+            </div>
+            <div className="field">
+              <label>Allocate Departments <span className="text-muted">(select all that apply)</span></label>
+              <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                {departments.filter((d) => d.isActive).map((d) => (
+                  <label
+                    key={d.id}
+                    className={`checkbox-chip${editDepartments.includes(d.id) ? " selected" : ""}`}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <input
+                      type="checkbox"
+                      style={{ display: "none" }}
+                      checked={editDepartments.includes(d.id)}
+                      onChange={() => toggleEditDepartment(d.id)}
+                    />
+                    {d.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div className="field">
+              <label>Allocate Group Managers <span className="text-muted">(select all that apply)</span></label>
+              <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                {groupManagers.map((m) => (
+                  <label
+                    key={m.id}
+                    className={`checkbox-chip${editManagers.includes(m.id) ? " selected" : ""}`}
+                    style={{ cursor: "pointer" }}
+                  >
+                    <input
+                      type="checkbox"
+                      style={{ display: "none" }}
+                      checked={editManagers.includes(m.id)}
+                      onChange={() => toggleEditManager(m.id)}
+                    />
+                    {m.name}
+                  </label>
+                ))}
+              </div>
             </div>
           </form>
         )}
