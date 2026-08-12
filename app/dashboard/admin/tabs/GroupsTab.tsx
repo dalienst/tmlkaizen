@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import type { Group, Department, User } from "@/db/schema";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -212,6 +213,13 @@ export default function GroupsTab({
                 <td className="text-sub">{formatDate(grp.createdAt)}</td>
                 <td>
                   <div className="flex gap-2">
+                    <Link
+                      href={`/dashboard/group-manager?group=${grp.id}`}
+                      className="btn btn-ghost btn-sm"
+                      style={{ textDecoration: "none" }}
+                    >
+                      View Analytics
+                    </Link>
                     <Button size="sm" variant="ghost" onClick={() => openEditModal(grp)}>
                       Edit
                     </Button>

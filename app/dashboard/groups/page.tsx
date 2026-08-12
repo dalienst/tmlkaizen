@@ -11,6 +11,7 @@ import {
 import { eq, inArray, asc } from "drizzle-orm";
 import GroupsTab from "../admin/tabs/GroupsTab";
 import { formatDate } from "@/lib/constants";
+import Link from "next/link";
 
 export const metadata = { title: "Groups Directory | Kaizen Tracker" };
 
@@ -101,6 +102,7 @@ export default async function GroupsPage() {
                   <th>Assigned Departments</th>
                   <th>Status</th>
                   <th>Created</th>
+                  <th style={{ width: "8rem" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,6 +141,15 @@ export default async function GroupsPage() {
                         </span>
                       </td>
                       <td className="text-sub">{formatDate(grp.createdAt)}</td>
+                      <td>
+                        <Link
+                          href={`/dashboard/group-manager?group=${grp.id}`}
+                          className="btn btn-ghost btn-sm"
+                          style={{ textDecoration: "none" }}
+                        >
+                          View Analytics
+                        </Link>
+                      </td>
                     </tr>
                   );
                 })}
