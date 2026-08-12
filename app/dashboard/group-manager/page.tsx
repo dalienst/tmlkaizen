@@ -168,11 +168,11 @@ export default async function GroupManagerPage({
 
         <div className="grid grid-cols-12 gap-6">
           {/* Recent submissions */}
-          <div className="col-span-8 card">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-sm">Recent Submissions</h2>
-              <Link href="/dashboard/group-manager/projects" className="link text-xs">
-                View all projects
+          <div className="col-span-8 card overflow-hidden">
+            <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid var(--color-border)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="font-semibold" style={{ fontSize: "0.9375rem" }}>Recent Submissions</span>
+              <Link href="/dashboard/group-manager/projects" className="btn btn-ghost btn-sm" style={{ textDecoration: "none" }}>
+                View all →
               </Link>
             </div>
 
@@ -234,9 +234,11 @@ export default async function GroupManagerPage({
           </div>
 
           {/* Department stats */}
-          <div className="col-span-4 card">
-            <h2 className="font-semibold text-sm mb-4">Department Breakdown</h2>
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+          <div className="col-span-4 card p-5">
+            <div className="font-semibold mb-4" style={{ fontSize: "0.9375rem" }}>
+              Department Breakdown
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
               {deptBreakdown.length === 0 && (
                 <div className="text-muted text-center py-4" style={{ fontSize: "0.8125rem" }}>
                   No departments found.
@@ -246,23 +248,40 @@ export default async function GroupManagerPage({
                 const rate = db.total > 0 ? Math.round((db.completed / db.total) * 100) : 0;
                 return (
                   <div key={db.id}>
-                    <div className="flex justify-between items-center mb-1">
-                      <div className="font-medium text-xs truncate" style={{ maxWidth: "70%" }}>
+                    <div className="flex items-center justify-between mb-1">
+                      <Link
+                        href={`/dashboard/departments/${db.id}`}
+                        className="font-medium"
+                        style={{ fontSize: "0.875rem", textDecoration: "none", color: "var(--color-brand)" }}
+                      >
                         {db.name}
-                      </div>
-                      <div className="text-sub text-xs">
-                        {db.completed}/{db.total} ({rate}%)
-                      </div>
+                      </Link>
+                      <span className="text-sub" style={{ fontSize: "0.8125rem" }}>
+                        {db.total} total
+                      </span>
                     </div>
-                    <div style={{ height: "4px", backgroundColor: "#f3f4f6", borderRadius: "2px", overflow: "hidden" }}>
-                      <div
-                        style={{
-                          height: "100%",
-                          width: `${rate}%`,
-                          backgroundColor: rate >= 70 ? "var(--color-completed)" : "var(--color-inprogress)",
-                          borderRadius: "2px",
-                        }}
-                      />
+                    <div style={{ display: "flex", height: "0.5rem", borderRadius: "var(--radius)", overflow: "hidden", background: "var(--color-muted)" }}>
+                      {db.total > 0 && (
+                        <>
+                          <div
+                            style={{ width: `${(db.completed / db.total) * 100}%`, background: "var(--color-completed)", transition: "width 300ms ease" }}
+                            title={`Completed: ${db.completed}`}
+                          />
+                          <div
+                            style={{ width: `${(db.inProgress / db.total) * 100}%`, background: "var(--color-inprogress)", transition: "width 300ms ease" }}
+                            title={`In Progress: ${db.inProgress}`}
+                          />
+                          <div
+                            style={{ width: `${(db.proposed / db.total) * 100}%`, background: "var(--color-proposed)", opacity: 0.4 }}
+                            title={`Proposed: ${db.proposed}`}
+                          />
+                        </>
+                      )}
+                    </div>
+                    <div className="flex gap-3 mt-1" style={{ fontSize: "0.75rem", color: "var(--color-text-muted)" }}>
+                      <span>✓ {db.completed} done</span>
+                      <span>◎ {db.inProgress} in progress</span>
+                      <span>○ {db.proposed} proposed</span>
                     </div>
                   </div>
                 );
