@@ -1,6 +1,6 @@
 CREATE TABLE "managers_departments" (
-	"manager_user_id" integer NOT NULL,
-	"department_id" integer NOT NULL,
+	"manager_user_id" uuid NOT NULL,
+	"department_id" uuid NOT NULL,
 	CONSTRAINT "managers_departments_manager_user_id_department_id_pk" PRIMARY KEY("manager_user_id","department_id")
 );
 --> statement-breakpoint
