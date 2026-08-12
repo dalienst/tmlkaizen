@@ -9,9 +9,16 @@ export const metadata = {
   title: "Admin Dashboard | Kaizen Tracker",
 };
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const session = await auth();
   if (session?.user?.role !== "SYSTEM_ADMIN") redirect("/dashboard");
+
+  const resolvedParams = await searchParams;
+  const defaultTab = resolvedParams.tab;
 
   const [allLocations, allDepartments, allUsers, allCoreValues, allHRLocationsMapped, allGMLocationsMapped] =
     await Promise.all([
@@ -38,6 +45,7 @@ export default async function AdminPage() {
           coreValues={allCoreValues}
           hrLocationsMapped={allHRLocationsMapped}
           gmLocationsMapped={allGMLocationsMapped}
+          defaultTab={defaultTab}
         />
       </div>
     </div>

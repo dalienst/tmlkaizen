@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type {
   Location,
   Department,
@@ -28,6 +28,7 @@ interface AdminTabsProps {
   coreValues: CoreValue[];
   hrLocationsMapped: { hrUserId: string; locationId: string }[];
   gmLocationsMapped: { gmUserId: string; locationId: string }[];
+  defaultTab?: string;
 }
 
 export default function AdminTabs({
@@ -37,8 +38,20 @@ export default function AdminTabs({
   coreValues,
   hrLocationsMapped,
   gmLocationsMapped,
+  defaultTab,
 }: AdminTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabId>("locations");
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    if (defaultTab && TABS.some((t) => t.id === defaultTab)) {
+      return defaultTab as TabId;
+    }
+    return "locations";
+  });
+
+  useEffect(() => {
+    if (defaultTab && TABS.some((t) => t.id === defaultTab)) {
+      setActiveTab(defaultTab as TabId);
+    }
+  }, [defaultTab]);
 
   return (
     <div>

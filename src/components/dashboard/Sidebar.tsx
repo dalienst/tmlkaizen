@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { ROLE_LABELS } from "@/lib/constants";
 import type { UserRole } from "@/lib/constants";
@@ -15,6 +15,7 @@ interface NavItem {
 const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   SYSTEM_ADMIN: [
     { href: "/dashboard/admin", label: "Overview", icon: "⊞" },
+    { href: "/dashboard/admin?tab=users", label: "Users", icon: "👤" },
     { href: "/dashboard/analytics", label: "Analytics", icon: "📊" },
     { href: "/dashboard/departments", label: "Departments", icon: "🏢" },
     { href: "/dashboard/staff", label: "Staff", icon: "👥" },
@@ -52,6 +53,8 @@ import { useSidebar } from "@/context/SidebarContext";
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const activeTabParam = searchParams.get("tab");
   const { data: session } = useSession();
   const role = session?.user?.role as UserRole | undefined;
   const navItems = role ? NAV_ITEMS[role] : [];
@@ -82,9 +85,22 @@ export function Sidebar() {
         {(() => {
           const rootOnlyLinks = new Set(["/dashboard/admin", "/dashboard/hr", "/dashboard/gm", "/dashboard/manager"]);
           return navItems.map((item) => {
-            const isActive =
-              pathname === item.href ||
-              (!rootOnlyLinks.has(item.href) && pathname.startsWith(item.href + "/"));
+            let isActive = false;
+            if (item.href.includes("?")) {
+              const [path, query] = item.href.split("?");
+              const params = new URLSearchParams(query);
+              const tabValue = params.get("tab");
+              isActive = pathname === path && activeTabParam === tabValue;
+            } else {
+              if (item.href === "/dashboard/admin" && activeTabParam) {
+                isActive = false;
+              } else {
+                isActive =
+                  pathname === item.href ||
+                  (!rootOnlyLinks.has(item.href) && pathname.startsWith(item.href + "/"));
+              }
+            }
+
             return (
               <Link
                 key={item.href}
