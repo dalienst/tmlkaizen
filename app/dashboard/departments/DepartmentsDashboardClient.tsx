@@ -280,6 +280,23 @@ export default function DepartmentsDashboardClient({
               <label htmlFor="dept-dashboard-edit-code">Department code</label>
               <input id="dept-dashboard-edit-code" name="code" type="text" defaultValue={editTarget.code} required style={{ textTransform: "uppercase" }} />
             </div>
+            <div className="field">
+              <label htmlFor="dept-dashboard-edit-location">Location</label>
+              <select id="dept-dashboard-edit-location" name="locationId" defaultValue={editTarget.locationId} required>
+                <option value="">Select location…</option>
+                {allowedLocations.map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+                {!allowedLocations.some((l) => l.id === editTarget.locationId) && (() => {
+                  const currentLoc = locations.find((l) => l.id === editTarget.locationId);
+                  return currentLoc ? (
+                    <option key={currentLoc.id} value={currentLoc.id}>
+                      {currentLoc.name}
+                    </option>
+                  ) : null;
+                })()}
+              </select>
+            </div>
           </form>
         )}
       </Modal>

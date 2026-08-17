@@ -294,6 +294,23 @@ export default function DepartmentsTab({
               <input id="dept-edit-code" name="code" type="text" defaultValue={editTarget.code} required style={{ textTransform: "uppercase" }} />
             </div>
             <div className="field">
+              <label htmlFor="dept-edit-location">Location</label>
+              <select id="dept-edit-location" name="locationId" defaultValue={editTarget.locationId} required>
+                <option value="">Select location…</option>
+                {locations.filter((l) => l.isActive).map((l) => (
+                  <option key={l.id} value={l.id}>{l.name}</option>
+                ))}
+                {!locations.some((l) => l.isActive && l.id === editTarget.locationId) && (() => {
+                  const currentLoc = locations.find((l) => l.id === editTarget.locationId);
+                  return currentLoc ? (
+                    <option key={currentLoc.id} value={currentLoc.id}>
+                      {currentLoc.name}
+                    </option>
+                  ) : null;
+                })()}
+              </select>
+            </div>
+            <div className="field">
               <label htmlFor="dept-edit-group">Group <span className="text-muted">(optional)</span></label>
               <select id="dept-edit-group" name="groupId" defaultValue={editTarget.groupId ?? ""}>
                 <option value="">No Group</option>

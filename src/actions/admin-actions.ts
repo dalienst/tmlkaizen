@@ -219,11 +219,12 @@ export async function updateDepartment(formData: FormData) {
     await assertAdminOrHR();
     const id = formData.get("id") as string;
     const name = (formData.get("name") as string).trim();
+    const locationId = formData.get("locationId") as string;
     let code = (formData.get("code") as string)?.trim().toUpperCase() || "";
     const groupIdVal = formData.get("groupId");
     const groupId = groupIdVal && groupIdVal !== "" ? (groupIdVal as string) : null;
 
-    if (!name || !id) return { error: "ID and Name are required." };
+    if (!name || !id || !locationId) return { error: "ID, Name, and Location are required." };
 
     if (!code) {
       code = name.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -239,7 +240,7 @@ export async function updateDepartment(formData: FormData) {
       return { error: `Department code "${code}" is already in use.` };
     }
 
-    await db.update(departments).set({ name, code, groupId }).where(eq(departments.id, id));
+    await db.update(departments).set({ name, code, locationId, groupId }).where(eq(departments.id, id));
     revalidatePath("/dashboard/admin");
     revalidatePath("/dashboard/departments");
     return { success: true };
