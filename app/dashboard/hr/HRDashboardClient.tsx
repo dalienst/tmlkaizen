@@ -70,18 +70,22 @@ export default function HRDashboardClient({
       const staffId = row.staffId.trim();
       const name = row.name.trim();
       const email = row.email.trim();
-      const departmentCode = row.departmentCode.trim();
+      const departmentCodeInput = row.departmentCode.trim();
 
-      if (!staffId || !name || !email || !departmentCode) {
+      if (!staffId || !name || !email || !departmentCodeInput) {
         setBulkError(`Row ${i + 1} has incomplete details. All fields are required.`);
         return;
       }
+
+      // Try to parse the code from parentheses, e.g. "Nairobi Hub - IT (IT)" -> "IT"
+      const parenMatch = departmentCodeInput.match(/\(([^)]+)\)$/);
+      const departmentCode = parenMatch ? parenMatch[1].trim() : departmentCodeInput;
 
       const deptExists = departments.some(
         (d) => d.isActive && d.code.toUpperCase() === departmentCode.toUpperCase()
       );
       if (!deptExists) {
-        setBulkError(`Row ${i + 1} has an invalid department code: "${departmentCode}". Please select or enter a valid department code.`);
+        setBulkError(`Row ${i + 1} has an invalid department: "${departmentCodeInput}". Please select a valid department.`);
         return;
       }
 
@@ -505,9 +509,7 @@ EMP002,John Smith,john@company.com,HR`}
             ))}
             <datalist id="departments-datalist">
               {departments.filter((d) => d.isActive).map((d) => (
-                <option key={d.id} value={d.code}>
-                  {getDeptLabel(d)} ({d.code})
-                </option>
+                <option key={d.id} value={`${getDeptLabel(d)} (${d.code})`} />
               ))}
             </datalist>
           </div>
