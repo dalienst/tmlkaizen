@@ -18,6 +18,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { href: "/dashboard/admin?tab=users", label: "Users", icon: "👤" },
     { href: "/dashboard/analytics", label: "Analytics", icon: "📊" },
     { href: "/dashboard/groups", label: "Groups", icon: "📂" },
+    { href: "/dashboard/locations", label: "Locations", icon: "📍" },
     { href: "/dashboard/departments", label: "Departments", icon: "🏢" },
     { href: "/dashboard/staff", label: "Staff", icon: "👥" },
     { href: "/dashboard/core-values", label: "Core Values", icon: "★" },

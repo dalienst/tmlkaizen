@@ -76,6 +76,15 @@ export default function HRDashboardClient({
         setBulkError(`Row ${i + 1} has incomplete details. All fields are required.`);
         return;
       }
+
+      const deptExists = departments.some(
+        (d) => d.isActive && d.code.toUpperCase() === departmentCode.toUpperCase()
+      );
+      if (!deptExists) {
+        setBulkError(`Row ${i + 1} has an invalid department code: "${departmentCode}". Please select or enter a valid department code.`);
+        return;
+      }
+
       toInsert.push({ staffId, name, email, departmentCode });
     }
 
@@ -464,17 +473,15 @@ EMP002,John Smith,john@company.com,HR`}
                   required
                   style={{ flex: 2, padding: "0.375rem 0.5rem" }}
                 />
-                <select
+                <input
+                  type="text"
+                  list="departments-datalist"
+                  placeholder="Search department..."
                   value={row.departmentCode}
                   onChange={(e) => updateBulkRow(idx, "departmentCode", e.target.value)}
                   required
                   style={{ flex: 2.5, padding: "0.375rem 0.5rem" }}
-                >
-                  <option value="">Select department…</option>
-                  {departments.filter((d) => d.isActive).map((d) => (
-                    <option key={d.id} value={d.code}>{getDeptLabel(d)} ({d.code})</option>
-                  ))}
-                </select>
+                />
                 <div style={{ width: "2rem", display: "flex", justifyContent: "center" }}>
                   {bulkRows.length > 1 && (
                     <button
@@ -496,6 +503,13 @@ EMP002,John Smith,john@company.com,HR`}
                 </div>
               </div>
             ))}
+            <datalist id="departments-datalist">
+              {departments.filter((d) => d.isActive).map((d) => (
+                <option key={d.id} value={d.code}>
+                  {getDeptLabel(d)} ({d.code})
+                </option>
+              ))}
+            </datalist>
           </div>
 
           <div style={{ marginTop: "1rem" }}>

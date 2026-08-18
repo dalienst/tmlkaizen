@@ -18,6 +18,7 @@ const ROUTE_ROLES: Record<string, UserRole[]> = {
   "/dashboard/manager": ["DEPT_MANAGER", "SYSTEM_ADMIN"],
   "/dashboard/group-manager": ["GROUP_MANAGER", "SYSTEM_ADMIN"],
   "/dashboard/groups": ["SYSTEM_ADMIN", "GROUP_MANAGER"],
+  "/dashboard/locations": ["SYSTEM_ADMIN"],
 };
 
 export default auth((req) => {
