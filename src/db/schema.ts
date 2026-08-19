@@ -58,10 +58,10 @@ export const departments = pgTable("departments", {
   id: uuid("id").defaultRandom().primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   code: varchar("code", { length: 100 }).notNull(),
-  locationId: uuid("location_id")
+  locationId: varchar("location_id", { length: 255 })
     .notNull()
     .references(() => locations.id, { onDelete: "restrict" }),
-  groupId: uuid("group_id").references(() => groups.id, { onDelete: "set null" }),
+  groupId: varchar("group_id", { length: 255 }).references(() => groups.id, { onDelete: "set null" }),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
@@ -78,11 +78,11 @@ export const users = pgTable("users", {
   passwordHash: text("password_hash").notNull(),
   role: userRoleEnum("role").notNull(),
   /** GM: tied to one location */
-  locationId: uuid("location_id").references(() => locations.id, {
+  locationId: varchar("location_id", { length: 255 }).references(() => locations.id, {
     onDelete: "set null",
   }),
   /** DEPT_MANAGER: tied to one department */
-  departmentId: uuid("department_id").references(() => departments.id, {
+  departmentId: varchar("department_id", { length: 255 }).references(() => departments.id, {
     onDelete: "set null",
   }),
   isActive: boolean("is_active").notNull().default(true),
@@ -96,10 +96,10 @@ export const users = pgTable("users", {
 export const hrLocations = pgTable(
   "hr_locations",
   {
-    hrUserId: uuid("hr_user_id")
+    hrUserId: varchar("hr_user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    locationId: uuid("location_id")
+    locationId: varchar("location_id", { length: 255 })
       .notNull()
       .references(() => locations.id, { onDelete: "cascade" }),
   },
@@ -111,10 +111,10 @@ export const hrLocations = pgTable(
 export const gmLocations = pgTable(
   "gm_locations",
   {
-    gmUserId: uuid("gm_user_id")
+    gmUserId: varchar("gm_user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    locationId: uuid("location_id")
+    locationId: varchar("location_id", { length: 255 })
       .notNull()
       .references(() => locations.id, { onDelete: "cascade" }),
   },
@@ -126,10 +126,10 @@ export const gmLocations = pgTable(
 export const groupManagersGroups = pgTable(
   "group_managers_groups",
   {
-    groupManagerId: uuid("group_manager_id")
+    groupManagerId: varchar("group_manager_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    groupId: uuid("group_id")
+    groupId: varchar("group_id", { length: 255 })
       .notNull()
       .references(() => groups.id, { onDelete: "cascade" }),
   },
@@ -141,10 +141,10 @@ export const groupManagersGroups = pgTable(
 export const managersDepartments = pgTable(
   "managers_departments",
   {
-    managerUserId: uuid("manager_user_id")
+    managerUserId: varchar("manager_user_id", { length: 255 })
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    departmentId: uuid("department_id")
+    departmentId: varchar("department_id", { length: 255 })
       .notNull()
       .references(() => departments.id, { onDelete: "cascade" }),
   },
@@ -173,7 +173,7 @@ export const staff = pgTable(
     staffId: varchar("staff_id", { length: 100 }).notNull(),
     name: varchar("name", { length: 255 }).notNull(),
     email: varchar("email", { length: 255 }).notNull(),
-    departmentId: uuid("department_id")
+    departmentId: varchar("department_id", { length: 255 })
       .notNull()
       .references(() => departments.id, { onDelete: "restrict" }),
     isActive: boolean("is_active").notNull().default(true),
@@ -196,10 +196,10 @@ export const kaizenProjects = pgTable("kaizen_projects", {
   expectedBenefit: text("expected_benefit").notNull(),
   imageUrls: text("image_urls").array().notNull().default([]),
   status: projectStatusEnum("status").notNull().default("PROPOSED"),
-  staffId: uuid("staff_id")
+  staffId: varchar("staff_id", { length: 255 })
     .notNull()
     .references(() => staff.id, { onDelete: "restrict" }),
-  departmentId: uuid("department_id")
+  departmentId: varchar("department_id", { length: 255 })
     .notNull()
     .references(() => departments.id, { onDelete: "restrict" }),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -346,7 +346,7 @@ export type GroupManagersGroup = typeof groupManagersGroups.$inferSelect;
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: uuid("id").defaultRandom().primaryKey(),
-  userId: uuid("user_id")
+  userId: varchar("user_id", { length: 255 })
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
   token: varchar("token", { length: 255 }).notNull().unique(),
