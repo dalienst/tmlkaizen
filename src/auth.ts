@@ -10,7 +10,10 @@ import type { UserRole } from "@/lib/constants";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   adapter: DrizzleAdapter(db),
-  session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 24 * 60 * 60, // 24 hours (1 day)
+  },
   pages: {
     signIn: "/login",
   },
