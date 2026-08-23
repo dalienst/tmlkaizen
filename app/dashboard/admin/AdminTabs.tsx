@@ -7,6 +7,7 @@ import type {
   User,
   CoreValue,
   Group,
+  Staff,
 } from "@/db/schema";
 import LocationsTab from "./tabs/LocationsTab";
 import DepartmentsTab from "./tabs/DepartmentsTab";
@@ -34,6 +35,7 @@ interface AdminTabsProps {
   groups: Group[];
   groupManagersGroupsMapped: { groupManagerId: string; groupId: string }[];
   managersDepartmentsMapped: { managerUserId: string; departmentId: string }[];
+  staff: Staff[];
   defaultTab?: string;
 }
 
@@ -47,6 +49,7 @@ export default function AdminTabs({
   groups,
   groupManagersGroupsMapped,
   managersDepartmentsMapped,
+  staff,
   defaultTab,
 }: AdminTabsProps) {
   const [activeTab, setActiveTab] = useState<TabId>(() => {
@@ -107,6 +110,7 @@ export default function AdminTabs({
           gmLocationsMapped={gmLocationsMapped}
           groupManagersGroupsMapped={groupManagersGroupsMapped}
           managersDepartmentsMapped={managersDepartmentsMapped}
+          staff={staff}
         />
       )}
     </div>
