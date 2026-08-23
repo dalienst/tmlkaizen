@@ -365,7 +365,7 @@ const createUserSchema = z.object({
 });
 
 export async function createUser(formData: FormData) {
-  await assertAdmin();
+  await assertAdminOrHR();
 
   const locationIdVal = formData.get("locationId");
   const departmentIdVal = formData.get("departmentId");
@@ -857,7 +857,7 @@ export async function bulkCreateGroups(
 }
 
 export async function deleteUser(userId: string) {
-  await assertAdmin();
+  await assertAdminOrHR();
   try {
     await db.delete(users).where(eq(users.id, userId));
     revalidatePath("/dashboard/admin");

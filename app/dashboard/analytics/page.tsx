@@ -183,7 +183,7 @@ export default async function AnalyticsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-6 mb-6" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        <div className="grid grid-cols-2 gap-6 mb-6">
           {/* Department breakdown */}
           <div>
             <div className="font-semibold" style={{ marginBottom: "0.75rem", fontSize: "0.875rem" }}>

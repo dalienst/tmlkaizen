@@ -52,7 +52,7 @@ export default function HRDashboardClient({
   const [convertError, setConvertError] = useState<string | null>(null);
 
   const { data: session } = useSession();
-  const isAdmin = session?.user?.role === "SYSTEM_ADMIN";
+  const canManageAccounts = session?.user?.role === "SYSTEM_ADMIN" || session?.user?.role === "HR";
 
   function toggleConvertHRLocation(id: string) {
     setConvertHRLocations((prev) =>
@@ -364,7 +364,7 @@ EMP002,John Smith,john@company.com,HR`}
               <th>Name</th>
               <th>Email</th>
               <th>Department</th>
-              <th style={{ width: isAdmin ? "14rem" : "8rem" }}>Actions</th>
+              <th style={{ width: canManageAccounts ? "14rem" : "8rem" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -391,7 +391,7 @@ EMP002,John Smith,john@company.com,HR`}
                   <div className="flex gap-2 items-center">
                     <Button size="sm" variant="ghost" onClick={() => setEditTarget(s)}>Edit</Button>
                     <Button size="sm" variant="danger" onClick={() => setRemoveTarget(s)}>Remove</Button>
-                    {isAdmin && (() => {
+                    {canManageAccounts && (() => {
                       const isAlreadyUser =
                         existingUsers.some(
                           (u) =>

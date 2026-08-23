@@ -61,7 +61,7 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
       </div>
       <div className="dashboard-content">
         {/* Profile card */}
-        <div className="grid grid-cols-2 gap-4 mb-6" style={{ gridTemplateColumns: "1fr 2fr" }}>
+        <div className="staff-profile-grid mb-6">
           <div className="card" style={{ padding: "1.25rem" }}>
             <div className="font-semibold" style={{ marginBottom: "1rem" }}>Profile</div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
@@ -81,7 +81,7 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
           </div>
 
           {/* Stats */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem" }}>
+          <div className="staff-stats-grid">
             {[
               { label: "Total", value: projects.length, color: "var(--color-brand)" },
               { label: "In Progress", value: inProgress, color: "var(--color-inprogress)" },
