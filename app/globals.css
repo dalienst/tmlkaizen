@@ -388,6 +388,7 @@ input[type="email"],
 input[type="password"],
 input[type="search"],
 input[type="number"],
+input[type="date"],
 textarea,
 select {
   width: 100%;
@@ -415,6 +416,7 @@ input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="search"]:focus,
 input[type="number"]:focus,
+input[type="date"]:focus,
 textarea:focus,
 select:focus {
   border-color: var(--color-brand);
