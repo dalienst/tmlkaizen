@@ -1,7 +1,17 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { db } from "@/db";
-import { staff, departments, locations, kaizenProjects, coreValues } from "@/db/schema";
+import {
+  staff,
+  departments,
+  locations,
+  kaizenProjects,
+  coreValues,
+  gmLocations,
+  hrLocations,
+  groupManagersGroups,
+  managersDepartments,
+} from "@/db/schema";
 import { eq, desc, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { StatusBadge } from "@/components/ui/Badge";
@@ -27,9 +37,54 @@ export default async function StaffDetailPage({ params }: { params: Promise<{ id
   const dept = await db.query.departments.findFirst({ where: eq(departments.id, member.departmentId) });
   const loc = dept ? await db.query.locations.findFirst({ where: eq(locations.id, dept.locationId) }) : null;
 
-  // DEPT_MANAGER: can only see staff in their own department
-  if (session.user.role === "DEPT_MANAGER" && member.departmentId !== session.user.departmentId) {
-    notFound();
+  // Access control checking scoped departments
+  let allowedDeptIds: string[] | null = null;
+  const role = session.user.role;
+  const userId = session.user.id as string;
+
+  if (role === "DEPT_MANAGER") {
+    const managedDepts = await db
+      .select({ departmentId: managersDepartments.departmentId })
+      .from(managersDepartments)
+      .where(eq(managersDepartments.managerUserId, userId));
+    let deptIds = managedDepts.map((d) => d.departmentId);
+    if (deptIds.length === 0 && session.user.departmentId) {
+      deptIds = [session.user.departmentId];
+    }
+    allowedDeptIds = deptIds;
+  } else if (role === "GM") {
+    const gmLocs = await db.select({ locationId: gmLocations.locationId }).from(gmLocations).where(eq(gmLocations.gmUserId, userId));
+    const locationIds = gmLocs.map((l) => l.locationId);
+    if (locationIds.length > 0) {
+      const depts = await db.select({ id: departments.id }).from(departments).where(inArray(departments.locationId, locationIds));
+      allowedDeptIds = depts.map((d) => d.id);
+    } else {
+      allowedDeptIds = [];
+    }
+  } else if (role === "HR") {
+    const hrLocs = await db.select({ locationId: hrLocations.locationId }).from(hrLocations).where(eq(hrLocations.hrUserId, userId));
+    const locationIds = hrLocs.map((l) => l.locationId);
+    if (locationIds.length > 0) {
+      const depts = await db.select({ id: departments.id }).from(departments).where(inArray(departments.locationId, locationIds));
+      allowedDeptIds = depts.map((d) => d.id);
+    } else {
+      allowedDeptIds = [];
+    }
+  } else if (role === "GROUP_MANAGER") {
+    const mgrGroups = await db.select({ groupId: groupManagersGroups.groupId }).from(groupManagersGroups).where(eq(groupManagersGroups.groupManagerId, userId));
+    const groupIds = mgrGroups.map((g) => g.groupId);
+    if (groupIds.length > 0) {
+      const depts = await db.select({ id: departments.id }).from(departments).where(inArray(departments.groupId, groupIds));
+      allowedDeptIds = depts.map((d) => d.id);
+    } else {
+      allowedDeptIds = [];
+    }
+  }
+
+  if (allowedDeptIds !== null) {
+    if (!member.departmentId || !allowedDeptIds.includes(member.departmentId)) {
+      notFound();
+    }
   }
 
   const projects = await db
