@@ -11,8 +11,9 @@ import {
   groups,
   groupManagersGroups,
   managersDepartments,
+  staff,
 } from "@/db/schema";
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import AdminTabs from "./AdminTabs";
 
 export const metadata = {
@@ -40,6 +41,7 @@ export default async function AdminPage({
     allGroups,
     allGroupManagersGroupsMapped,
     allManagersDepartmentsMapped,
+    allStaff,
   ] = await Promise.all([
     db.select().from(locations).orderBy(asc(locations.name)),
     db.select().from(departments).orderBy(asc(departments.name)),
@@ -50,6 +52,7 @@ export default async function AdminPage({
     db.select().from(groups).orderBy(asc(groups.name)),
     db.select().from(groupManagersGroups),
     db.select().from(managersDepartments),
+    db.select().from(staff).where(eq(staff.isActive, true)).orderBy(asc(staff.name)),
   ]);
 
   return (
@@ -70,6 +73,7 @@ export default async function AdminPage({
           groups={allGroups}
           groupManagersGroupsMapped={allGroupManagersGroupsMapped}
           managersDepartmentsMapped={allManagersDepartmentsMapped}
+          staff={allStaff}
           defaultTab={defaultTab}
         />
       </div>

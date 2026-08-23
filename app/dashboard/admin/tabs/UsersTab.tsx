@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import type { User, Location, Department, Group } from "@/db/schema";
+import type { User, Location, Department, Group, Staff } from "@/db/schema";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { createUser, updateUser, toggleUserActive, resendCredentials } from "@/actions/admin-actions";
@@ -18,6 +18,7 @@ interface UsersTabProps {
   gmLocationsMapped: { gmUserId: string; locationId: string }[];
   groupManagersGroupsMapped: { groupManagerId: string; groupId: string }[];
   managersDepartmentsMapped: { managerUserId: string; departmentId: string }[];
+  staff: Staff[];
 }
 
 export default function UsersTab({
@@ -29,6 +30,7 @@ export default function UsersTab({
   gmLocationsMapped,
   groupManagersGroupsMapped,
   managersDepartmentsMapped,
+  staff,
 }: UsersTabProps) {
   const [isCreateOpen, setCreateOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<string>("HR");
@@ -43,6 +45,39 @@ export default function UsersTab({
   const [selectedGroupManagerGroups, setSelectedGroupManagerGroups] = useState<string[]>([]);
   const [selectedManagerDepartments, setSelectedManagerDepartments] = useState<string[]>([]);
   const [createError, setCreateError] = useState<string | null>(null);
+
+  // Promote staff to user states
+  const [formName, setFormName] = useState("");
+  const [formEmail, setFormEmail] = useState("");
+  const [formStaffId, setFormStaffId] = useState("");
+  const [formDeptId, setFormDeptId] = useState("");
+  const [selectedStaffSelectId, setSelectedStaffSelectId] = useState("");
+
+  const existingStaffIds = new Set(users.map((u) => u.staffId?.toUpperCase()).filter(Boolean));
+  const existingEmails = new Set(users.map((u) => u.email.toLowerCase()));
+
+  const eligibleStaff = staff.filter(
+    (s) => !existingStaffIds.has(s.staffId.toUpperCase()) && !existingEmails.has(s.email.toLowerCase())
+  );
+
+  const handleStaffSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    setSelectedStaffSelectId(val);
+    if (val === "") {
+      setFormName("");
+      setFormEmail("");
+      setFormStaffId("");
+      setFormDeptId("");
+    } else {
+      const match = eligibleStaff.find((s) => s.id === val);
+      if (match) {
+        setFormName(match.name);
+        setFormEmail(match.email);
+        setFormStaffId(match.staffId);
+        setFormDeptId(match.departmentId);
+      }
+    }
+  };
 
   const [editTarget, setEditTarget] = useState<User | null>(null);
   const [editRole, setEditRole] = useState<string>("HR");
@@ -124,6 +159,11 @@ export default function UsersTab({
         setSelectedGMLocations([]);
         setSelectedGroupManagerGroups([]);
         setSelectedManagerDepartments([]);
+        setFormName("");
+        setFormEmail("");
+        setFormStaffId("");
+        setFormDeptId("");
+        setSelectedStaffSelectId("");
         toast.success("User created successfully!");
       }
     });
@@ -207,7 +247,19 @@ export default function UsersTab({
             Accounts receive credentials by email immediately upon creation.
           </div>
         </div>
-        <Button variant="primary" size="sm" onClick={() => setCreateOpen(true)}>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={() => {
+            setCreateOpen(true);
+            setFormName("");
+            setFormEmail("");
+            setFormStaffId("");
+            setFormDeptId("");
+            setSelectedStaffSelectId("");
+            setCreateError(null);
+          }}
+        >
           + Add user
         </Button>
       </div>
@@ -316,17 +368,67 @@ export default function UsersTab({
             A password will be auto-generated and emailed to the user. They can change it after signing in.
           </p>
 
+          {/* Pre-fill from existing staff */}
+          {eligibleStaff.length > 0 && (
+            <div
+              className="field"
+              style={{
+                borderBottom: "1px solid var(--color-border)",
+                paddingBottom: "1rem",
+                marginBottom: "0.5rem",
+              }}
+            >
+              <label htmlFor="select-staff">Pre-fill from existing staff member</label>
+              <select
+                id="select-staff"
+                value={selectedStaffSelectId}
+                onChange={handleStaffSelect}
+                style={{ background: "rgba(var(--color-brand-rgb), 0.05)" }}
+              >
+                <option value="">-- Choose existing staff (optional) --</option>
+                {eligibleStaff.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.staffId})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="field">
             <label htmlFor="user-name">Full name</label>
-            <input id="user-name" name="name" type="text" placeholder="Jane Doe" required />
+            <input
+              id="user-name"
+              name="name"
+              type="text"
+              placeholder="Jane Doe"
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              required
+            />
           </div>
           <div className="field">
             <label htmlFor="user-email">Email address</label>
-            <input id="user-email" name="email" type="email" placeholder="jane@company.com" required />
+            <input
+              id="user-email"
+              name="email"
+              type="email"
+              placeholder="jane@company.com"
+              value={formEmail}
+              onChange={(e) => setFormEmail(e.target.value)}
+              required
+            />
           </div>
           <div className="field">
             <label htmlFor="user-staffid">Staff ID <span className="text-muted">(optional)</span></label>
-            <input id="user-staffid" name="staffId" type="text" placeholder="e.g. EMP-001" />
+            <input
+              id="user-staffid"
+              name="staffId"
+              type="text"
+              placeholder="e.g. EMP-001"
+              value={formStaffId}
+              onChange={(e) => setFormStaffId(e.target.value)}
+            />
           </div>
           <div className="field">
             <label htmlFor="user-role">Role</label>
@@ -429,7 +531,12 @@ export default function UsersTab({
                 <span className="text-muted">(required if Staff ID is entered)</span>
               )}
             </label>
-            <select id="user-department" name="departmentId">
+            <select
+              id="user-department"
+              name="departmentId"
+              value={formDeptId}
+              onChange={(e) => setFormDeptId(e.target.value)}
+            >
               <option value="">Select department…</option>
               {departments.filter((d) => d.isActive).map((d) => (
                 <option key={d.id} value={d.id}>{getDeptLabel(d)}</option>
