@@ -855,3 +855,17 @@ export async function bulkCreateGroups(
   revalidatePath("/dashboard/admin");
   return { success: true, created: toInsert.length };
 }
+
+export async function deleteUser(userId: string) {
+  await assertAdmin();
+  try {
+    await db.delete(users).where(eq(users.id, userId));
+    revalidatePath("/dashboard/admin");
+    revalidatePath("/dashboard/staff");
+    revalidatePath("/dashboard/hr");
+    return { success: true };
+  } catch (error: any) {
+    return { error: error.message || "Failed to delete user" };
+  }
+}
+

@@ -14,12 +14,14 @@ import DepartmentsTab from "./tabs/DepartmentsTab";
 import CoreValuesTab from "./tabs/CoreValuesTab";
 import UsersTab from "./tabs/UsersTab";
 import GroupsTab from "./tabs/GroupsTab";
+import HRDashboardClient from "../hr/HRDashboardClient";
 
 const TABS = [
   { id: "locations", label: "Locations" },
   { id: "departments", label: "Departments" },
   { id: "groups", label: "Groups" },
   { id: "core-values", label: "Core Values" },
+  { id: "staff", label: "Staff" },
   { id: "users", label: "Users" },
 ] as const;
 
@@ -65,6 +67,8 @@ export default function AdminTabs({
     }
   }, [defaultTab]);
 
+  const existingUsers = users.map((u) => ({ staffId: u.staffId, email: u.email }));
+
   return (
     <div>
       <div className="tab-strip">
@@ -99,6 +103,15 @@ export default function AdminTabs({
       )}
       {activeTab === "core-values" && (
         <CoreValuesTab coreValues={coreValues} />
+      )}
+      {activeTab === "staff" && (
+        <HRDashboardClient
+          staff={staff}
+          departments={departments}
+          locations={locations}
+          existingUsers={existingUsers}
+          groups={groups}
+        />
       )}
       {activeTab === "users" && (
         <UsersTab

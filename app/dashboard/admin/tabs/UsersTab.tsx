@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import type { User, Location, Department, Group, Staff } from "@/db/schema";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
-import { createUser, updateUser, toggleUserActive, resendCredentials } from "@/actions/admin-actions";
+import { createUser, updateUser, toggleUserActive, resendCredentials, deleteUser } from "@/actions/admin-actions";
 import { ROLE_LABELS, formatDate } from "@/lib/constants";
 import type { UserRole } from "@/lib/constants";
 import { toast } from "react-hot-toast";
@@ -216,6 +216,20 @@ export default function UsersTab({
     });
   }
 
+  function handleDeleteUser(userId: string, userName: string) {
+    if (!confirm(`Are you sure you want to delete ${userName}'s user account? This will revert them to a standard staff member and remove all their management assignments.`)) {
+      return;
+    }
+    startTransition(async () => {
+      const res = await deleteUser(userId);
+      if (res?.error) {
+        toast.error(res.error);
+      } else {
+        toast.success("User account deleted and reverted successfully.");
+      }
+    });
+  }
+
   function openEditModal(u: User) {
     setEditTarget(u);
     setEditRole(u.role);
@@ -274,7 +288,7 @@ export default function UsersTab({
               <th>Role</th>
               <th>Status</th>
               <th>Joined</th>
-              <th style={{ width: "18rem" }}>Actions</th>
+              <th style={{ width: "22rem" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -333,6 +347,14 @@ export default function UsersTab({
                       onClick={() => handleToggle(u)}
                     >
                       {u.isActive ? "Deactivate" : "Activate"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="danger"
+                      disabled={isPending}
+                      onClick={() => handleDeleteUser(u.id, u.name)}
+                    >
+                      Delete
                     </Button>
                   </div>
                 </td>
