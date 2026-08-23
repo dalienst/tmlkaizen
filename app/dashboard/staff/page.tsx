@@ -10,8 +10,10 @@ import {
   groupManagersGroups,
   kaizenProjects,
   managersDepartments,
+  users,
+  groups,
 } from "@/db/schema";
-import { eq, inArray, count } from "drizzle-orm";
+import { eq, inArray, count, asc } from "drizzle-orm";
 import Link from "next/link";
 import { formatDate } from "@/lib/constants";
 import HRDashboardClient from "../hr/HRDashboardClient";
@@ -119,6 +121,11 @@ export default async function StaffPage() {
   const countMap = Object.fromEntries(projectCounts.map((r) => [r.staffId, Number(r.count)]));
 
   if (role === "SYSTEM_ADMIN") {
+    const [existingUsers, allGroups] = await Promise.all([
+      db.select({ staffId: users.staffId, email: users.email }).from(users),
+      db.select().from(groups).orderBy(asc(groups.name)),
+    ]);
+
     return (
       <div className="dashboard-main">
         <div className="dashboard-header">
@@ -134,6 +141,8 @@ export default async function StaffPage() {
             staff={staffQuery}
             departments={allDepts}
             locations={allLocations}
+            existingUsers={existingUsers}
+            groups={allGroups}
           />
         </div>
       </div>

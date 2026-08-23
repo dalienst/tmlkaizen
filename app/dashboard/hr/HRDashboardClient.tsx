@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useTransition, useRef } from "react";
-import type { Staff, Department, Location } from "@/db/schema";
+import type { Staff, Department, Location, Group } from "@/db/schema";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { addStaffMember, updateStaffMember, removeStaffMember, bulkImportStaff } from "@/actions/hr-actions";
+import { createUser } from "@/actions/admin-actions";
 import { toast } from "react-hot-toast";
+import { useSession } from "next-auth/react";
+import type { UserRole } from "@/lib/constants";
 
 interface BulkRow {
   staffId: string;
@@ -18,12 +21,16 @@ interface HRDashboardClientProps {
   staff: Staff[];
   departments: Department[];
   locations: Location[];
+  existingUsers?: { staffId: string | null; email: string }[];
+  groups?: Group[];
 }
 
 export default function HRDashboardClient({
   staff,
   departments,
   locations,
+  existingUsers = [],
+  groups = [],
 }: HRDashboardClientProps) {
   const [search, setSearch] = useState("");
   const [filterDeptId, setFilterDeptId] = useState<string | "all">("all");
@@ -34,6 +41,86 @@ export default function HRDashboardClient({
   const [csvError, setCsvError] = useState<string | null>(null);
   const [csvSuccess, setCsvSuccess] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  // Convert staff to user states
+  const [convertTarget, setConvertTarget] = useState<Staff | null>(null);
+  const [convertRole, setConvertRole] = useState<string>("DEPT_MANAGER");
+  const [convertHRLocations, setConvertHRLocations] = useState<string[]>([]);
+  const [convertGMLocations, setConvertGMLocations] = useState<string[]>([]);
+  const [convertGroupManagerGroups, setConvertGroupManagerGroups] = useState<string[]>([]);
+  const [convertManagerDepartments, setConvertManagerDepartments] = useState<string[]>([]);
+  const [convertError, setConvertError] = useState<string | null>(null);
+
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "SYSTEM_ADMIN";
+
+  function toggleConvertHRLocation(id: string) {
+    setConvertHRLocations((prev) =>
+      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
+    );
+  }
+  function toggleConvertGMLocation(id: string) {
+    setConvertGMLocations((prev) =>
+      prev.includes(id) ? prev.filter((l) => l !== id) : [...prev, id]
+    );
+  }
+  function toggleConvertGroupManagerGroup(id: string) {
+    setConvertGroupManagerGroups((prev) =>
+      prev.includes(id) ? prev.filter((g) => g !== id) : [...prev, id]
+    );
+  }
+  function toggleConvertManagerDepartment(id: string) {
+    setConvertManagerDepartments((prev) =>
+      prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id]
+    );
+  }
+
+  async function handleConvertSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!convertTarget) return;
+
+    setConvertError(null);
+    const fd = new FormData();
+    fd.set("name", convertTarget.name);
+    fd.set("email", convertTarget.email);
+    fd.set("staffId", convertTarget.staffId);
+    fd.set("departmentId", convertTarget.departmentId);
+    fd.set("role", convertRole);
+
+    const staffDept = departments.find((d) => d.id === convertTarget.departmentId);
+    if (staffDept) {
+      fd.set("locationId", staffDept.locationId);
+    }
+
+    if (convertRole === "HR") {
+      fd.set("hrLocationIds", JSON.stringify(convertHRLocations));
+    }
+    if (convertRole === "GM") {
+      fd.set("gmLocationIds", JSON.stringify(convertGMLocations));
+    }
+    if (convertRole === "GROUP_MANAGER") {
+      fd.set("groupManagerGroupIds", JSON.stringify(convertGroupManagerGroups));
+    }
+    if (convertRole === "DEPT_MANAGER") {
+      fd.set("managerDepartmentIds", JSON.stringify(convertManagerDepartments));
+    }
+
+    startTransition(async () => {
+      const result = await createUser(fd);
+      if (result?.error) {
+        setConvertError(result.error);
+        toast.error(result.error);
+      } else {
+        setConvertTarget(null);
+        setConvertRole("DEPT_MANAGER");
+        setConvertHRLocations([]);
+        setConvertGMLocations([]);
+        setConvertGroupManagerGroups([]);
+        setConvertManagerDepartments([]);
+        toast.success("Staff converted to user account successfully!");
+      }
+    });
+  }
   const csvInputRef = useRef<HTMLInputElement>(null);
 
   const [isBulkOpen, setBulkOpen] = useState(false);
@@ -277,7 +364,7 @@ EMP002,John Smith,john@company.com,HR`}
               <th>Name</th>
               <th>Email</th>
               <th>Department</th>
-              <th style={{ width: "8rem" }}>Actions</th>
+              <th style={{ width: isAdmin ? "14rem" : "8rem" }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -301,9 +388,37 @@ EMP002,John Smith,john@company.com,HR`}
                 <td className="text-sub">{s.email}</td>
                 <td className="text-sub">{deptName(s.departmentId)}</td>
                 <td>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     <Button size="sm" variant="ghost" onClick={() => setEditTarget(s)}>Edit</Button>
                     <Button size="sm" variant="danger" onClick={() => setRemoveTarget(s)}>Remove</Button>
+                    {isAdmin && (() => {
+                      const isAlreadyUser =
+                        existingUsers.some(
+                          (u) =>
+                            (u.staffId && u.staffId.toUpperCase() === s.staffId.toUpperCase()) ||
+                            u.email.toLowerCase() === s.email.toLowerCase()
+                        );
+                      return isAlreadyUser ? (
+                        <span className="text-muted ml-1" style={{ fontSize: "0.75rem" }}>Converted</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          style={{ color: "var(--color-brand)" }}
+                          onClick={() => {
+                            setConvertTarget(s);
+                            setConvertRole("DEPT_MANAGER");
+                            setConvertHRLocations([]);
+                            setConvertGMLocations([]);
+                            setConvertGroupManagerGroups([]);
+                            setConvertManagerDepartments([]);
+                            setConvertError(null);
+                          }}
+                        >
+                          Convert
+                        </Button>
+                      );
+                    })()}
                   </div>
                 </td>
               </tr>
@@ -529,6 +644,175 @@ EMP002,John Smith,john@company.com,HR`}
             </span>
           </div>
         </form>
+      </Modal>
+
+      {/* Convert Staff to User Account Modal */}
+      <Modal
+        isOpen={!!convertTarget}
+        onClose={() => setConvertTarget(null)}
+        title="Convert Staff to Management User"
+        maxWidth="28rem"
+        footer={
+          <>
+            <Button variant="secondary" size="sm" onClick={() => setConvertTarget(null)}>Cancel</Button>
+            <Button variant="primary" size="sm" type="submit" form="convert-staff-form" isLoading={isPending}>
+              Create Account &amp; Convert
+            </Button>
+          </>
+        }
+      >
+        {convertTarget && (
+          <form id="convert-staff-form" onSubmit={handleConvertSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            {convertError && <div className="alert alert-error">{convertError}</div>}
+            
+            <p className="text-sub" style={{ fontSize: "0.8125rem", marginBottom: "0.5rem" }}>
+              A password will be auto-generated and emailed to the user. They can change it after logging in.
+            </p>
+
+            <div className="field">
+              <label>Staff Name</label>
+              <input type="text" value={convertTarget.name} readOnly style={{ background: "var(--color-muted)", cursor: "not-allowed" }} />
+            </div>
+
+            <div className="field">
+              <label>Email Address</label>
+              <input type="text" value={convertTarget.email} readOnly style={{ background: "var(--color-muted)", cursor: "not-allowed" }} />
+            </div>
+
+            <div className="field">
+              <label>Staff ID</label>
+              <input type="text" value={convertTarget.staffId} readOnly style={{ background: "var(--color-muted)", cursor: "not-allowed" }} />
+            </div>
+
+            <div className="field">
+              <label>Home Department</label>
+              <input 
+                type="text" 
+                value={getDeptLabel(departments.find((d) => d.id === convertTarget.departmentId)!)} 
+                readOnly 
+                style={{ background: "var(--color-muted)", cursor: "not-allowed" }} 
+              />
+            </div>
+
+            <div className="field">
+              <label htmlFor="convert-role">Role</label>
+              <select
+                id="convert-role"
+                value={convertRole}
+                onChange={(e) => {
+                  setConvertRole(e.target.value);
+                  setConvertHRLocations([]);
+                  setConvertGMLocations([]);
+                  setConvertGroupManagerGroups([]);
+                  setConvertManagerDepartments([]);
+                }}
+                required
+              >
+                <option value="SYSTEM_ADMIN">System Admin</option>
+                <option value="HR">HR</option>
+                <option value="GM">General Manager</option>
+                <option value="DEPT_MANAGER">Department Manager</option>
+                <option value="GROUP_MANAGER">Group Manager</option>
+              </select>
+            </div>
+
+            {/* GM checkboxes */}
+            {convertRole === "GM" && (
+              <div className="field">
+                <label>Assigned locations <span className="text-muted">(select all that apply)</span></label>
+                <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                  {locations.filter((l) => l.isActive).map((l) => (
+                    <label
+                      key={l.id}
+                      className={`checkbox-chip${convertGMLocations.includes(l.id) ? " selected" : ""}`}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        style={{ display: "none" }}
+                        checked={convertGMLocations.includes(l.id)}
+                        onChange={() => toggleConvertGMLocation(l.id)}
+                      />
+                      {l.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* HR checkboxes */}
+            {convertRole === "HR" && (
+              <div className="field">
+                <label>Assigned locations <span className="text-muted">(select all that apply)</span></label>
+                <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                  {locations.filter((l) => l.isActive).map((l) => (
+                    <label
+                      key={l.id}
+                      className={`checkbox-chip${convertHRLocations.includes(l.id) ? " selected" : ""}`}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        style={{ display: "none" }}
+                        checked={convertHRLocations.includes(l.id)}
+                        onChange={() => toggleConvertHRLocation(l.id)}
+                      />
+                      {l.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Group Manager checkboxes */}
+            {convertRole === "GROUP_MANAGER" && (
+              <div className="field">
+                <label>Assigned groups <span className="text-muted">(select all that apply)</span></label>
+                <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                  {groups.filter((g) => g.isActive).map((g) => (
+                    <label
+                      key={g.id}
+                      className={`checkbox-chip${convertGroupManagerGroups.includes(g.id) ? " selected" : ""}`}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        style={{ display: "none" }}
+                        checked={convertGroupManagerGroups.includes(g.id)}
+                        onChange={() => toggleConvertGroupManagerGroup(g.id)}
+                      />
+                      {g.name} ({g.code})
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Department Manager checkboxes */}
+            {convertRole === "DEPT_MANAGER" && (
+              <div className="field">
+                <label>Assigned departments <span className="text-muted">(select all that apply)</span></label>
+                <div className="checkbox-group" style={{ marginTop: "0.375rem" }}>
+                  {departments.filter((d) => d.isActive).map((d) => (
+                    <label
+                      key={d.id}
+                      className={`checkbox-chip${convertManagerDepartments.includes(d.id) ? " selected" : ""}`}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <input
+                        type="checkbox"
+                        style={{ display: "none" }}
+                        checked={convertManagerDepartments.includes(d.id)}
+                        onChange={() => toggleConvertManagerDepartment(d.id)}
+                      />
+                      {getDeptLabel(d)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </form>
+        )}
       </Modal>
     </div>
   );
