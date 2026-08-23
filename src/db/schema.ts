@@ -208,6 +208,8 @@ export const kaizenProjects = pgTable("kaizen_projects", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
+  startDate: timestamp("start_date", { withTimezone: true }),
+  endDate: timestamp("end_date", { withTimezone: true }),
 });
 
 // ─── Relations ────────────────────────────────────────────────────────────────

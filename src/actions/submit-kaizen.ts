@@ -56,6 +56,11 @@ const submissionSchema = z.object({
   expectedBenefit: z.string().min(10, "Please describe the expected benefit."),
   imageUrls: z.array(z.string().url()).max(3),
   status: z.enum(["PROPOSED", "IN_PROGRESS", "COMPLETED"]).optional().default("PROPOSED"),
+  startDate: z.string().min(1, "Please select a start date."),
+  endDate: z.string().min(1, "Please select an end date."),
+}).refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
+  message: "End date must be on or after start date.",
+  path: ["endDate"],
 });
 
 async function generateReferenceNumber(): Promise<string> {
@@ -76,6 +81,8 @@ export async function submitKaizen(payload: {
   expectedBenefit: string;
   imageUrls: string[];
   status?: string;
+  startDate: string;
+  endDate: string;
 }) {
   // Verify staff session cookie
   const cookieStore = await cookies();
@@ -98,7 +105,7 @@ export async function submitKaizen(payload: {
     return { error: parsed.error.issues[0].message };
   }
 
-  const { coreValueIds, currentSituation, improvementIdea, expectedBenefit, imageUrls, status } =
+  const { coreValueIds, currentSituation, improvementIdea, expectedBenefit, imageUrls, status, startDate, endDate } =
     parsed.data;
 
   const referenceNumber = await generateReferenceNumber();
@@ -113,6 +120,8 @@ export async function submitKaizen(payload: {
     status: status || "PROPOSED",
     staffId: staffDbId,
     departmentId,
+    startDate: new Date(startDate),
+    endDate: new Date(endDate),
   });
 
   // Clear session cookie after successful submission

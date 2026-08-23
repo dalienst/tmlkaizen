@@ -49,6 +49,8 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [status, setStatus] = useState<string>("PROPOSED");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function toggleCV(id: string) {
@@ -104,6 +106,8 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
       expectedBenefit,
       imageUrls,
       status,
+      startDate,
+      endDate,
     });
 
     setIsSubmitting(false);
@@ -163,6 +167,8 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
             setFiles([]);
             setStaffName("");
             setStatus("PROPOSED");
+            setStartDate(new Date().toISOString().split("T")[0]);
+            setEndDate(new Date().toISOString().split("T")[0]);
           }}
         >
           Submit another
@@ -275,6 +281,30 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
               <option value="IN_PROGRESS">In Progress</option>
               <option value="COMPLETED">Implemented (Completed)</option>
             </select>
+          </div>
+
+          {/* Project Dates */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="field">
+              <label htmlFor="startDate">Start Date</label>
+              <input
+                id="startDate"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="endDate">End / Target Date</label>
+              <input
+                id="endDate"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+              />
+            </div>
           </div>
 
           {/* Text fields */}
