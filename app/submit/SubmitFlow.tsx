@@ -310,7 +310,7 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
           {/* Text fields */}
           <div className="field">
             <label htmlFor="current-situation">
-              Current situation
+              Current situation (Describe current issues in your workplace)
               <span className="text-muted" style={{ fontWeight: 400, marginLeft: "0.25rem" }}>
                 ({currentSituation.length} chars)
               </span>

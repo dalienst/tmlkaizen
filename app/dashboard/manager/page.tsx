@@ -7,6 +7,7 @@ import {
   departments,
   coreValues,
   managersDepartments,
+  locations,
 } from "@/db/schema";
 import { eq, desc, inArray, asc } from "drizzle-orm";
 import ManagerDashboardClient from "./ManagerDashboardClient";
@@ -67,7 +68,17 @@ export default async function ManagerPage({
   const selectedDeptId = deptParam && deptIds.includes(deptParam) ? deptParam : deptIds[0];
 
   const [allManagedDepts, projects, allCoreValues] = await Promise.all([
-    db.select().from(departments).where(inArray(departments.id, deptIds)).orderBy(asc(departments.name)),
+    db
+      .select({
+        id: departments.id,
+        name: departments.name,
+        locationId: departments.locationId,
+        locationName: locations.name,
+      })
+      .from(departments)
+      .leftJoin(locations, eq(departments.locationId, locations.id))
+      .where(inArray(departments.id, deptIds))
+      .orderBy(asc(departments.name)),
     db
       .select({
         project: kaizenProjects,
@@ -100,7 +111,9 @@ export default async function ManagerPage({
         <div>
           <div className="font-semibold" style={{ fontSize: "1rem" }}>Projects Dashboard</div>
           {selectedDept && (
-            <div className="text-sub" style={{ fontSize: "0.8125rem" }}>{selectedDept.name}</div>
+            <div className="text-sub" style={{ fontSize: "0.8125rem" }}>
+              {selectedDept.name} {selectedDept.locationName ? `(${selectedDept.locationName})` : ""}
+            </div>
           )}
         </div>
         {allManagedDepts.length > 1 && (
@@ -111,7 +124,7 @@ export default async function ManagerPage({
                 href={`/dashboard/manager?dept=${d.id}`}
                 className={`btn btn-sm ${selectedDeptId === d.id ? "btn-primary" : "btn-secondary"}`}
               >
-                {d.name}
+                {d.name} {d.locationName ? `(${d.locationName})` : ""}
               </Link>
             ))}
           </div>
@@ -121,7 +134,12 @@ export default async function ManagerPage({
         {/* Quick nav cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
           {[
-            { href: selectedDeptId ? `/dashboard/departments/${selectedDeptId}` : "/dashboard/departments", label: "Selected Department", desc: selectedDept?.name ?? "View details", icon: "🏢" },
+            { 
+              href: selectedDeptId ? `/dashboard/departments/${selectedDeptId}` : "/dashboard/departments", 
+              label: "Selected Department", 
+              desc: selectedDept ? `${selectedDept.name} ${selectedDept.locationName ? `(${selectedDept.locationName})` : ""}` : "View details", 
+              icon: "🏢" 
+            },
             { href: "/dashboard/staff", label: "Staff", desc: "Department staff roster", icon: "👥" },
             { href: "/dashboard/analytics", label: "Analytics", desc: "Progress & stall detection", icon: "📊" },
           ].map((card) => (

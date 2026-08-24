@@ -53,7 +53,18 @@ export default function AnalyticsClient({
   const [criticalStalledOnly, setCriticalStalledOnly] = useState(false);
 
   const deptMap = useMemo(() => new Map(departments.map((d) => [d.id, d])), [departments]);
+  const locMap = useMemo(() => new Map(locations.map((l) => [l.id, l])), [locations]);
   const cvMap = useMemo(() => new Map(coreValues.map((cv) => [cv.id, cv.name])), [coreValues]);
+
+  const getDeptLabel = useMemo(() => {
+    return (dId: string | null) => {
+      if (!dId) return "—";
+      const d = deptMap.get(dId);
+      if (!d) return "—";
+      const loc = locMap.get(d.locationId);
+      return loc ? `${d.name} (${loc.name})` : d.name;
+    };
+  }, [deptMap, locMap]);
 
   // ─── 1. Filter Projects by Time Period ──────────────────────────────────────
   const filteredProjects = useMemo(() => {
@@ -427,7 +438,7 @@ export default function AnalyticsClient({
                 return (
                   <div key={d.id}>
                     <div className="flex items-center justify-between mb-1" style={{ fontSize: "0.8125rem" }}>
-                      <span className="font-medium">{d.name}</span>
+                      <span className="font-medium">{getDeptLabel(d.id)}</span>
                       <span className="text-sub">
                         {d.completed}/{d.total} completed ({d.rate}%)
                       </span>
@@ -476,7 +487,7 @@ export default function AnalyticsClient({
                     <td className="text-muted" style={{ fontSize: "0.8125rem" }}>#{index + 1}</td>
                     <td className="font-medium">
                       <Link href={`/dashboard/departments/${d.id}`} style={{ textDecoration: "none", color: "var(--color-brand)" }}>
-                        {d.name}
+                        {getDeptLabel(d.id)}
                       </Link>
                     </td>
                     <td><span className="badge badge-brand">{d.total}</span></td>
@@ -503,7 +514,7 @@ export default function AnalyticsClient({
             >
               <option value="all">All Departments</option>
               {departments.map((d) => (
-                <option key={d.id} value={d.id}>{d.name}</option>
+                <option key={d.id} value={d.id}>{getDeptLabel(d.id)}</option>
               ))}
             </select>
           </div>
@@ -529,7 +540,7 @@ export default function AnalyticsClient({
                         {s.name}
                       </Link>
                     </td>
-                    <td className="text-sub">{s.deptName}</td>
+                    <td className="text-sub">{getDeptLabel(s.departmentId)}</td>
                     <td><span className="badge badge-brand">{s.total}</span></td>
                     <td><span className="badge badge-completed">{s.completed}</span></td>
                   </tr>
@@ -630,7 +641,7 @@ export default function AnalyticsClient({
                         </code>
                       </td>
                       <td className="font-medium">{s.staffName}</td>
-                      <td className="text-sub">{s.deptName}</td>
+                      <td className="text-sub">{getDeptLabel(s.project.departmentId)}</td>
                       <td><StatusBadge status={s.project.status} /></td>
                       <td className="text-sub">{formatDate(s.project.updatedAt)}</td>
                       <td>
