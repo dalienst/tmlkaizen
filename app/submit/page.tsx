@@ -4,6 +4,8 @@ import { eq, asc } from "drizzle-orm";
 import SubmitFlow from "./SubmitFlow";
 import Image from "next/image";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Submit Kaizen | Tamarind",
   description: "Submit a Kaizen (continuous improvement) idea for your department.",

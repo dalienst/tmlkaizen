@@ -4,6 +4,8 @@ import { users } from "@/db/schema";
 import { eq, count } from "drizzle-orm";
 import SetupForm from "./SetupForm";
 
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Initial Setup | Kaizen Tracker",
 };
