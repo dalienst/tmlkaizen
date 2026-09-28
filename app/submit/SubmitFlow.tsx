@@ -47,7 +47,6 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
   const [expectedBenefit, setExpectedBenefit] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>("PROPOSED");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
@@ -105,7 +104,6 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
       improvementIdea,
       expectedBenefit,
       imageUrls,
-      status,
       startDate,
       endDate,
     });
@@ -166,7 +164,6 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
             setExpectedBenefit("");
             setFiles([]);
             setStaffName("");
-            setStatus("PROPOSED");
             setStartDate(new Date().toISOString().split("T")[0]);
             setEndDate(new Date().toISOString().split("T")[0]);
           }}
@@ -266,21 +263,6 @@ export default function SubmitFlow({ coreValues }: SubmitFlowProps) {
                 </label>
               ))}
             </div>
-          </div>
-
-          {/* Status selection */}
-          <div className="field">
-            <label htmlFor="idea-status">Status of this idea</label>
-            <select
-              id="idea-status"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              required
-            >
-              <option value="PROPOSED">Proposed</option>
-              <option value="IN_PROGRESS">In Progress</option>
-              <option value="COMPLETED">Implemented (Completed)</option>
-            </select>
           </div>
 
           {/* Project Dates */}

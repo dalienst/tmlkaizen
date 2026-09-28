@@ -55,7 +55,6 @@ const submissionSchema = z.object({
   improvementIdea: z.string().min(10, "Please describe your improvement idea."),
   expectedBenefit: z.string().min(10, "Please describe the expected benefit."),
   imageUrls: z.array(z.string().url()).max(3),
-  status: z.enum(["PROPOSED", "IN_PROGRESS", "COMPLETED"]).optional().default("PROPOSED"),
   startDate: z.string().min(1, "Please select a start date."),
   endDate: z.string().min(1, "Please select an end date."),
 }).refine((data) => new Date(data.endDate) >= new Date(data.startDate), {
@@ -80,7 +79,6 @@ export async function submitKaizen(payload: {
   improvementIdea: string;
   expectedBenefit: string;
   imageUrls: string[];
-  status?: string;
   startDate: string;
   endDate: string;
 }) {
@@ -105,7 +103,7 @@ export async function submitKaizen(payload: {
     return { error: parsed.error.issues[0].message };
   }
 
-  const { coreValueIds, currentSituation, improvementIdea, expectedBenefit, imageUrls, status, startDate, endDate } =
+  const { coreValueIds, currentSituation, improvementIdea, expectedBenefit, imageUrls, startDate, endDate } =
     parsed.data;
 
   const referenceNumber = await generateReferenceNumber();
@@ -117,7 +115,7 @@ export async function submitKaizen(payload: {
     improvementIdea,
     expectedBenefit,
     imageUrls,
-    status: status || "PROPOSED",
+    status: "PROPOSED",
     staffId: staffDbId,
     departmentId,
     startDate: new Date(startDate),

@@ -29,6 +29,7 @@ const NEXT_STATUS: Record<ProjectStatus, ProjectStatus | null> = {
   PROPOSED: "IN_PROGRESS",
   IN_PROGRESS: "COMPLETED",
   COMPLETED: null,
+  REJECTED: null,
 };
 
 export default function ProjectDetailClient({
@@ -72,15 +73,59 @@ export default function ProjectDetailClient({
 
         <div className="flex items-center gap-3">
           <StatusBadge status={status} />
-          {canEdit && next && (
-            <Button
-              variant="primary"
-              size="sm"
-              isLoading={isPending}
-              onClick={() => handleStatusChange(next)}
-            >
-              Mark as {PROJECT_STATUS_LABELS[next]}
-            </Button>
+          {canEdit && (
+            <div className="flex items-center gap-2">
+              {status === "PROPOSED" && (
+                <>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    isLoading={isPending}
+                    onClick={() => handleStatusChange("REJECTED")}
+                  >
+                    Reject Idea
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    isLoading={isPending}
+                    onClick={() => handleStatusChange("IN_PROGRESS")}
+                  >
+                    Approve (In Progress)
+                  </Button>
+                </>
+              )}
+              {status === "IN_PROGRESS" && (
+                <>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    isLoading={isPending}
+                    onClick={() => handleStatusChange("REJECTED")}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    isLoading={isPending}
+                    onClick={() => handleStatusChange("COMPLETED")}
+                  >
+                    Mark as Completed
+                  </Button>
+                </>
+              )}
+              {status === "REJECTED" && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  isLoading={isPending}
+                  onClick={() => handleStatusChange("IN_PROGRESS")}
+                >
+                  Re-open (In Progress)
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </div>

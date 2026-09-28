@@ -35,6 +35,8 @@
   --color-inprogress-bg: hsl(38 90% 95%);
   --color-completed:   hsl(145 55% 38%);
   --color-completed-bg: hsl(145 55% 95%);
+  --color-rejected:    hsl(0 68% 48%);
+  --color-rejected-bg: hsl(0 68% 96%);
 
   /* Surfaces */
   --color-surface:     hsl(0 0% 100%);
@@ -531,6 +533,7 @@ textarea {
 .badge-proposed   { background-color: var(--color-proposed-bg);   color: var(--color-proposed); }
 .badge-inprogress { background-color: var(--color-inprogress-bg); color: var(--color-inprogress); }
 .badge-completed  { background-color: var(--color-completed-bg);  color: var(--color-completed); }
+.badge-rejected   { background-color: var(--color-rejected-bg);   color: var(--color-rejected); }
 .badge-neutral    { background-color: var(--color-muted);          color: var(--color-text-sub); }
 .badge-brand      { background-color: var(--color-brand-50);       color: var(--color-brand); }
 

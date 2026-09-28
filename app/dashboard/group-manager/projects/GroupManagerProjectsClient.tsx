@@ -29,7 +29,7 @@ interface GroupManagerProjectsClientProps {
   coreValues: CoreValue[];
 }
 
-const STATUS_FILTERS = ["ALL", "PROPOSED", "IN_PROGRESS", "COMPLETED"] as const;
+const STATUS_FILTERS = ["ALL", "PROPOSED", "IN_PROGRESS", "COMPLETED", "REJECTED"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 export default function GroupManagerProjectsClient({

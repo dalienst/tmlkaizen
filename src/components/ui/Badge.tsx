@@ -1,7 +1,7 @@
 import { PROJECT_STATUS_LABELS } from "@/lib/constants";
 import type { ProjectStatus } from "@/lib/constants";
 
-type BadgeVariant = "proposed" | "inprogress" | "completed" | "neutral" | "brand";
+type BadgeVariant = "proposed" | "inprogress" | "completed" | "rejected" | "neutral" | "brand";
 
 interface BadgeProps {
   variant?: BadgeVariant;
@@ -23,6 +23,7 @@ export function StatusBadge({ status }: { status: ProjectStatus }) {
     PROPOSED: "proposed",
     IN_PROGRESS: "inprogress",
     COMPLETED: "completed",
+    REJECTED: "rejected",
   };
   return (
     <Badge variant={variantMap[status]}>

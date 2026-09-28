@@ -10,12 +10,14 @@ const TRANSITIONS: Record<ProjectStatus, ProjectStatus | null> = {
   PROPOSED: "IN_PROGRESS",
   IN_PROGRESS: "COMPLETED",
   COMPLETED: null,
+  REJECTED: null,
 };
 
 const NEXT_LABELS: Record<ProjectStatus, string> = {
   PROPOSED: "Mark In Progress",
   IN_PROGRESS: "Mark Completed",
   COMPLETED: "",
+  REJECTED: "",
 };
 
 interface Props {

@@ -14,6 +14,7 @@ export const PROJECT_STATUSES = {
   PROPOSED: "PROPOSED",
   IN_PROGRESS: "IN_PROGRESS",
   COMPLETED: "COMPLETED",
+  REJECTED: "REJECTED",
 } as const;
 
 export type ProjectStatus =
@@ -23,6 +24,7 @@ export const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
   PROPOSED: "Proposed",
   IN_PROGRESS: "In Progress",
   COMPLETED: "Completed",
+  REJECTED: "Rejected",
 };
 
 export const ROLE_LABELS: Record<UserRole, string> = {

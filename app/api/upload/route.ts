@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { cloudinary } from "@/lib/cloudinary";
+import { minioClient, PutObjectCommand, MINIO_BUCKET, MINIO_PUBLIC_URL } from "@/lib/minio";
 import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
@@ -25,16 +25,21 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    const result = await new Promise<{ secure_url: string }>((resolve, reject) => {
-      cloudinary.uploader
-        .upload_stream({ folder: "kaizen", resource_type: "auto" }, (err, res) => {
-          if (err) reject(err);
-          else resolve(res as { secure_url: string });
-        })
-        .end(buffer);
-    });
+    // Sanitize filename and create unique key
+    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const key = `kaizen/${Date.now()}-${sanitizedName}`;
 
-    urls.push(result.secure_url);
+    await minioClient.send(
+      new PutObjectCommand({
+        Bucket: MINIO_BUCKET,
+        Key: key,
+        Body: buffer,
+        ContentType: file.type || "application/octet-stream",
+      })
+    );
+
+    const publicUrl = `${MINIO_PUBLIC_URL.replace(/\/$/, "")}/${key}`;
+    urls.push(publicUrl);
   }
 
   return NextResponse.json({ urls });

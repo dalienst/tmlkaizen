@@ -26,6 +26,7 @@ export const projectStatusEnum = pgEnum("project_status", [
   "PROPOSED",
   "IN_PROGRESS",
   "COMPLETED",
+  "REJECTED",
 ]);
 
 // ─── Locations ────────────────────────────────────────────────────────────────

@@ -27,7 +27,7 @@ interface ManagerDashboardClientProps {
 
 const isImageUrl = (url: string) => /\.(jpg|jpeg|png|webp|gif)($|\?)/i.test(url);
 
-const STATUS_FILTERS = ["ALL", "PROPOSED", "IN_PROGRESS", "COMPLETED"] as const;
+const STATUS_FILTERS = ["ALL", "PROPOSED", "IN_PROGRESS", "COMPLETED", "REJECTED"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 export default function ManagerDashboardClient({
@@ -71,6 +71,7 @@ export default function ManagerDashboardClient({
     PROPOSED: "IN_PROGRESS",
     IN_PROGRESS: "COMPLETED",
     COMPLETED: null,
+    REJECTED: null,
   };
 
   return (
@@ -184,18 +185,65 @@ export default function ManagerDashboardClient({
         onClose={() => setSelected(null)}
         title={selected?.referenceNumber ?? ""}
         footer={
-          selected && NEXT_STATUS[selected.status] ? (
-            <Button
-              variant="primary"
-              isLoading={isPending}
-              onClick={() =>
-                handleStatusChange(selected.id, NEXT_STATUS[selected.status]!)
-              }
-            >
-              Mark as {PROJECT_STATUS_LABELS[NEXT_STATUS[selected.status]!]}
-            </Button>
-          ) : (
-            <span className="badge badge-completed">Completed ✓</span>
+          selected && (
+            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", justifyContent: "flex-end", width: "100%", flexWrap: "wrap" }}>
+              {selected.status === "PROPOSED" && (
+                <>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    isLoading={isPending}
+                    onClick={() => handleStatusChange(selected.id, "REJECTED")}
+                  >
+                    Reject Idea
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    isLoading={isPending}
+                    onClick={() => handleStatusChange(selected.id, "IN_PROGRESS")}
+                  >
+                    Approve (In Progress)
+                  </Button>
+                </>
+              )}
+              {selected.status === "IN_PROGRESS" && (
+                <>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    isLoading={isPending}
+                    onClick={() => handleStatusChange(selected.id, "REJECTED")}
+                  >
+                    Reject
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    isLoading={isPending}
+                    onClick={() => handleStatusChange(selected.id, "COMPLETED")}
+                  >
+                    Mark as Completed
+                  </Button>
+                </>
+              )}
+              {selected.status === "REJECTED" && (
+                <>
+                  <span className="badge badge-rejected" style={{ marginRight: "auto" }}>Rejected ✗</span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isLoading={isPending}
+                    onClick={() => handleStatusChange(selected.id, "IN_PROGRESS")}
+                  >
+                    Re-open (In Progress)
+                  </Button>
+                </>
+              )}
+              {selected.status === "COMPLETED" && (
+                <span className="badge badge-completed">Completed ✓</span>
+              )}
+            </div>
           )
         }
       >
